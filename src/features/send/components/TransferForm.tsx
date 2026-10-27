@@ -23,7 +23,7 @@ export type TransferValues = {
   note: string
 }
 
-const ALL_RAILS: Rail[] = ['ach', 'fednow', 'wire', 'sepa', 'base']
+const ALL_RAILS: Rail[] = ['ach_push', 'fednow', 'wire', 'sepa', 'base']
 
 const inputCls =
   'mt-2 h-12 w-full rounded-xl bg-fog px-4 font-mono text-ink outline-none transition-colors placeholder:text-muted/60 focus:border-[1.5px] focus:border-moss focus:bg-paper'

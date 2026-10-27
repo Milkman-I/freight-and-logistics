@@ -13,7 +13,7 @@ export function accountName(a: MoneyAccountRow): string {
 }
 
 export const RAIL_LABEL: Record<Rail, string> = {
-  ach: 'US bank · ACH',
+  ach_push: 'US bank · ACH',
   fednow: 'US bank · FedNow',
   wire: 'US bank · Wire',
   sepa: 'European bank · SEPA',

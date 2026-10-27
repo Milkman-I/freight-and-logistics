@@ -5,7 +5,8 @@
 
 export type Currency = 'USD' | 'EUR' | 'USDB'
 
-export type Rail = 'ach' | 'fednow' | 'wire' | 'sepa' | 'base'
+/** Rails per current Bridge API (docs: payment-routes) */
+export type Rail = 'ach_push' | 'wire' | 'fednow' | 'sepa' | 'base'
 
 export type AccountKind = 'us_checking' | 'eur_iban' | 'wallet'
 
@@ -17,6 +18,9 @@ export type MoneyAccountRow = {
   routing_number: string | null
   account_number: string | null
   iban: string | null
+  bank_name: string | null
+  beneficiary_name: string | null
+  wallet_address: string | null
   rails: string[]
   status: 'pending' | 'active' | 'failed'
   bridge_account_id: string | null

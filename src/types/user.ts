@@ -16,6 +16,7 @@ export type UserProfile = {
   full_name: string
   avatar_url: string | null
   bridge_customer_id: string | null
+  bridge_kyc_link_id: string | null
   kyc_status: KycStatus
   created_at: string
   updated_at?: string

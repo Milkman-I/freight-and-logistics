@@ -118,10 +118,11 @@ export function InvoicesPage() {
       return [
         `Pay invoice ${inv.number} — ${money(inv.amount_minor, inv.currency)}`,
         `Bank transfer (ACH/Wire) in USD to:`,
-        `Beneficiary: (your F&L name on file)`,
+        `Beneficiary: ${acc.beneficiary_name ?? 'your F&L name on file'}`,
         `Routing number: ${acc.routing_number}`,
         `Account number: ${acc.account_number}`,
-      ].join('\n')
+        acc.bank_name ? `Bank: ${acc.bank_name}` : '',
+      ].filter(Boolean).join('\n')
     }
     if (inv.currency === 'EUR') {
       if (!acc?.iban) return "EUR IBAN isn't provisioned yet — it appears right after identity verification clears."
@@ -129,12 +130,17 @@ export function InvoicesPage() {
         `Pay invoice ${inv.number} — ${money(inv.amount_minor, inv.currency)}`,
         `SEPA credit transfer in EUR to:`,
         `IBAN: ${acc.iban}`,
-        `Beneficiary: (your F&L name on file)`,
-      ].join('\n')
+        `Beneficiary: ${acc.beneficiary_name ?? 'your F&L name on file'}`,
+        acc.bank_name ? `Bank: ${acc.bank_name}` : '',
+      ].filter(Boolean).join('\n')
     }
+    const wallet = accounts.find((a) => a.currency === 'USDB')
+    if (!wallet?.wallet_address)
+      return "Your USDB wallet isn't provisioned yet — it appears right after identity verification clears. Reopen this page in a moment."
     return [
       `Pay invoice ${inv.number} — ${majorMoney(toMajor(inv.amount_minor, inv.currency), inv.currency)}`,
-      `Client sends USDB on Base to your F&L custody wallet.`,
+      `Client sends USDB on Base to your F&L custody wallet:`,
+      `${wallet.wallet_address}`,
       `The payment settles automatically and this invoice is marked paid the moment the funds arrive.`,
     ].join('\n')
   }

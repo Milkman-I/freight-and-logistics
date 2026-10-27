@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../services/supabase'
 import { fetchProfile } from '../../services/profiles'
-import { startKyc } from '../../services/bridge'
+import { onboardKyc, startKycUrl, syncKyc, provisionAccounts } from '../../services/bridge'
 import { notify } from '../../components/Toast'
 import type { UserProfile } from '../../types/user'
 import { AppRail } from '../../components/AppRail'
@@ -38,7 +38,16 @@ export function KycPage() {
       return
     }
     try {
-      setProfile(await fetchProfile(user.id))
+      let p = await fetchProfile(user.id)
+      if (p.kyc_status !== 'approved') {
+        // pull the kyc link's live state server-side, then read the synced row
+        await syncKyc().catch(() => null)
+        p = await fetchProfile(user.id)
+      } else {
+        // approved: make sure wallet + virtual accounts exist (idempotent)
+        void provisionAccounts().catch(() => null)
+      }
+      setProfile(p)
       setLoadFailed(false)
     } catch {
       setProfile(null)
@@ -57,7 +66,9 @@ export function KycPage() {
     if (!profile) return
     setBusy(true)
     try {
-      const url = await startKyc(profile)
+      // onboard (creates/resumes the kyc link) then get the hosted URL
+      await onboardKyc(profile)
+      const url = await startKycUrl()
       window.location.assign(url)
     } catch (e) {
       const slug = e instanceof Error ? e.message : 'request_failed'
