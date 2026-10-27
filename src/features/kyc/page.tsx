@@ -66,9 +66,9 @@ export function KycPage() {
     if (!profile) return
     setBusy(true)
     try {
-      // onboard (creates/resumes the kyc link) then get the hosted URL
-      await onboardKyc(profile)
-      const url = await startKycUrl()
+      // onboard reopens the user's one and only kyc link (self-healing);
+      // fall back to the stored link's URL when the response omits one
+      const url = (await onboardKyc(profile)) ?? (await startKycUrl())
       window.location.assign(url)
     } catch (e) {
       const slug = e instanceof Error ? e.message : 'request_failed'

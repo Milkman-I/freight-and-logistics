@@ -62,7 +62,7 @@ Edge Functions (`supabase/functions/`, deployed):
 
 | Function | `verify_jwt` | Purpose |
 |---|---|---|
-| `bridge-customer` | ✅ | creates/resumes the user's Bridge **kyc link** (`POST /v0/kyc_links`, `Api-Key` header), syncs `kyc_status` + `bridge_customer_id` |
+| `bridge-customer` | ✅ | creates/resumes the user's Bridge **kyc link** (`POST /v0/kyc_links`, `Api-Key` header), syncs `kyc_status` + `bridge_customer_id`; self-healing — Bridge allows one kyc link per email, so a `duplicate_record` rejection adopts the existing link and re-opens it instead of erroring (abandoned-mid-Persona users always get their original link back); every success response carries `redirect_url` |
 | `bridge-kyc-link` | ✅ | returns the hosted Persona verification URL for the stored kyc link |
 | `bridge-accounts` | ✅ | idempotent provisioning for approved customers: Base custody wallet (USDB) → USD virtual account (ACH push/FedNow/Wire) → EUR virtual IBAN (SEPA); registers + activates the Bridge webhook endpoint and stores its RSA public key in `bridge_config` |
 | `bridge-webhook` | ❌ | single receiver for all Bridge events; RSA signature verification (`X-Webhook-Signature: t=…,v0=…` against the `bridge_config` public key). New flat event schema only: `customer.*` → `kyc_status`, `kyc_link.*` → kyc + customer id, `virtual_account*` → `money_accounts`, `bridge_wallet*` → wallet row, `transfer.*` → `transactions` (upsert by `bridge_transfer_id`, settled incoming payments auto-mark matching invoices paid) |
