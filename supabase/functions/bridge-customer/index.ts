@@ -80,8 +80,6 @@ Deno.serve(async (req: Request) => {
 
   const payload = (await req.json().catch(() => ({}))) as {
     full_name?: string;
-    first_name?: string;
-    last_name?: string;
     redirect_uri?: string;
   };
 
@@ -136,7 +134,6 @@ Deno.serve(async (req: Request) => {
 
   const fullName =
     String(payload.full_name ?? "").trim() ||
-    [payload.first_name, payload.last_name].filter(Boolean).join(" ").trim() ||
     (profile?.full_name ?? "").trim() ||
     email.split("@")[0];
 
