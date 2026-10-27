@@ -12,7 +12,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
  * returned) instead of erroring — a user who abandoned Persona mid-flow
  * always reopens their original link, never a dead end. A stored-pointer
  * GET that doesn't resolve falls through to creation and converges the
- * same way. Every success response carries redirect_url. JWT auth.
+ * same way. Every success response carries redirect_url, and mirrors
+ * Bridge's own terms-of-service acceptance (tos_link / tos_status) — TOS
+ * acceptance is a Bridge prerequisite for approval, so the client can
+ * surface it as an onboarding step. JWT auth.
  * Secrets: BRIDGE_API_KEY · ALLOWED_ORIGINS (optional) · BRIDGE_API_URL
  * (optional, overrides https://api.bridge.xyz/v0).
  */
@@ -64,6 +67,8 @@ type LinkResponse = {
   kyc_link?: string;
   kyc_status?: string;
   customer_id?: string;
+  tos_link?: string;
+  tos_status?: string;
 };
 
 type DuplicateError = {
@@ -127,6 +132,8 @@ Deno.serve(async (req: Request) => {
             kyc_status: kyc,
             ...(link.customer_id ? { customer_id: link.customer_id } : {}),
             ...(link.kyc_link ? { redirect_url: link.kyc_link } : {}),
+            ...(link.tos_link ? { tos_link: link.tos_link } : {}),
+            ...(link.tos_status ? { tos_status: link.tos_status } : {}),
           },
           200,
           cors,
@@ -159,6 +166,8 @@ Deno.serve(async (req: Request) => {
           kyc_status: kyc,
           customer_id: link.customer_id ?? profile.bridge_customer_id,
           ...(link.kyc_link ? { redirect_url: link.kyc_link } : {}),
+          ...(link.tos_link ? { tos_link: link.tos_link } : {}),
+          ...(link.tos_status ? { tos_status: link.tos_status } : {}),
         },
         200,
         cors,

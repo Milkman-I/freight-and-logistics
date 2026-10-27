@@ -44,7 +44,12 @@ async function callFn<T = Record<string, unknown>>(
 
 export function onboardKyc(
   profile: Pick<UserProfile, 'full_name' | 'google_email'>,
-): Promise<{ kyc_status?: string; redirect_url?: string }> {
+): Promise<{
+  kyc_status?: string
+  redirect_url?: string
+  tos_link?: string
+  tos_status?: string
+}> {
   return callFn('bridge-customer', {
     full_name: profile.full_name || profile.google_email.split('@')[0] || 'F&L customer',
     redirect_uri: `${window.location.origin}/kyc/done`,
@@ -57,7 +62,13 @@ export async function startKycUrl(): Promise<string> {
   return link.redirect_url
 }
 
-export function syncKyc(): Promise<{ kyc_status?: string; customer_id?: string; redirect_url?: string }> {
+export function syncKyc(): Promise<{
+  kyc_status?: string
+  customer_id?: string
+  redirect_url?: string
+  tos_link?: string
+  tos_status?: string
+}> {
   return callFn('bridge-customer', {})
 }
 

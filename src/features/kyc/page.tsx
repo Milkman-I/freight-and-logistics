@@ -3,6 +3,8 @@
   Loads sync the kyc link's live state server-side; while Bridge reviews,
   the page re-syncs every 15s; a Verify click that finds the outcome
   already settled refreshes in place instead of reopening Persona.
+  Bridge's own terms of service must be accepted before approval — the
+  page surfaces that as step 1 (opens tos_link) and Persona as step 2.
   Once verified, accounts are NOT auto-provisioned: the setup card asks
   the user for their Base wallet — the only place deposits may sweep —
   and only then calls provisioning with that destination.
@@ -34,6 +36,7 @@ export function KycPage() {
   const navigate = useNavigate()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [accounts, setAccounts] = useState<MoneyAccountRow[]>([])
+  const [tos, setTos] = useState<{ link: string | null; status: string | null }>({ link: null, status: null })
   const [customAddress, setCustomAddress] = useState('')
   const [setupBusy, setSetupBusy] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
@@ -50,7 +53,10 @@ export function KycPage() {
     try {
       let p = await fetchProfile(user.id)
       if (p.kyc_status !== 'approved') {
-        await syncKyc().catch(() => null)
+        const sync = await syncKyc().catch(() => null)
+        // Bridge's provider-side TOS acceptance is a prerequisite for
+        // approval — track it so the page can surface it as step 1.
+        setTos({ link: sync?.tos_link ?? null, status: sync?.tos_status ?? null })
         p = await fetchProfile(user.id)
       } else {
         // Accounts are NOT auto-provisioned: the user chooses the deposit
@@ -176,7 +182,7 @@ export function KycPage() {
             </h1>
             <p className="mt-3 text-base leading-relaxed text-muted">
               {needsSetup
-                ? 'One last step: choose where your incoming deposits should land.'
+                ? 'One last step: enter the wallet where your incoming deposits should land.'
                 : 'Your account is active and all money features are unlocked.'}
             </p>
           </>
@@ -209,6 +215,23 @@ export function KycPage() {
             >
               Retry
             </button>
+          </div>
+        )}
+
+        {!done && tos.link && tos.status !== 'approved' && (
+          <div className="mt-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#F0DFA0] bg-[#FFF8E5] px-4 py-3">
+            <p className="min-w-48 flex-1 text-sm leading-snug text-[#5A4500]">
+              <b>Step 1:</b> Accept the terms of our payments provider — verification
+              can&apos;t finish without it. Then come back and verify.
+            </p>
+            <a
+              href={tos.link}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-xl border-[1.5px] border-[#C4CCB4] bg-white px-4 py-2.5 text-sm font-bold text-ink transition-colors hover:bg-fog"
+            >
+              Open and accept ↗
+            </a>
           </div>
         )}
 
