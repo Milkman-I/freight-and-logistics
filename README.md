@@ -95,4 +95,4 @@ Supabase Auth → Providers: none — email + password is enabled by default. If
 1. ✅ **Google auth** → replaced by **email + password** (no provider config needed; Google/Apple buttons removed)
 2. ✅ **DB schema + RLS** — canonical in `supabase/migrations/` (4 files, matching remote history; plan's old names `accounts`/`wallets` became `money_accounts`, `kyc_state` lives in `user_profiles.kyc_status`)
 3. ✅ **Edge Functions holding Bridge keys** — deployed + CORS-enabled (`bridge-customer`, `bridge-kyc-link`, `bridge-create-transfer`, `bridge-webhook` incl. audit trail to `webhook_events`). Remaining: `BRIDGE_API_KEY` / `BRIDGE_WEBHOOK_SECRET` secrets + register the webhook URL/secret in the Bridge dashboard
-4. ⏳ **Dashboard real data** — reads + page shell done; end-to-end (deposit → webhook → balance) is untested — no Bridge traffic logged yet
+4. ⏳ **Dashboard real data** — page, reads, history/invoice flows all built; the full deposit → webhook → balance loop has never run against live Bridge traffic yet (`webhook_events` is empty) because `BRIDGE_API_KEY` is rejected as invalid and `BRIDGE_WEBHOOK_SECRET` is still unset
