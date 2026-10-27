@@ -143,6 +143,19 @@ Deno.serve(async (req: Request) => {
     return json({ error: "wallet_address_required" }, 400, cors);
   }
 
+  // the customer's Base custody wallet funds this payout (docs: wallet source)
+  const { data: walletRow } = await service
+    .schema("public")
+    .from("money_accounts")
+    .select("bridge_account_id")
+    .eq("user_id", user.id)
+    .eq("kind", "wallet")
+    .maybeSingle<{ bridge_account_id: string | null }>();
+  if (!walletRow?.bridge_account_id) {
+    await failRow(tx.id);
+    return json({ error: "wallet_not_provisioned" }, 400, cors);
+  }
+
   const res = await fetch(`${BRIDGE_API}/transfers`, {
     method: "POST",
     headers: {
@@ -154,6 +167,11 @@ Deno.serve(async (req: Request) => {
     body: JSON.stringify({
       amount: amountMajor,
       on_behalf_of: profile.bridge_customer_id,
+      source: {
+        payment_rail: "bridge_wallet",
+        currency: tx.currency.toLowerCase(),
+        bridge_wallet_id: walletRow.bridge_account_id,
+      },
       destination: {
         payment_rail: railLower, // base chain payout
         currency: tx.currency.toLowerCase(),
