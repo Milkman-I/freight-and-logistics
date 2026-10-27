@@ -92,9 +92,7 @@ const WEBHOOK_CATEGORIES = [
   "transfer",
   "virtual_account",
   "virtual_account.activity",
-  "bridge_wallet.activity",
 ];
-
 Deno.serve(async (req: Request) => {
   const cors = corsFor(req);
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -160,13 +158,7 @@ Deno.serve(async (req: Request) => {
   let rows = (existing ?? []) as AccountRow[];
 
   const empty = rows.filter((a) =>
-    a.kind === "wallet"
-      ? !a.wallet_address
-      : a.currency === "USD"
-      ? !a.account_number
-      : a.currency === "EUR"
-      ? !a.iban
-      : false,
+    a.currency === "USD" ? !a.account_number : a.currency === "EUR" ? !a.iban : false,
   );
   if (empty.length > 0) {
     await db.from("money_accounts").delete().in("id", empty.map((a) => a.id));

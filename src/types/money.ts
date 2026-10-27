@@ -1,16 +1,15 @@
 /* ============================================================
    F&L types — money (src/types/money.ts)
-   Mirrors public.money_accounts / transactions / balances.
-   Rail mirrors the transactions.rail DB constraint (bridge_wallet
-   and static_memo rows arrive via the webhook, so the union only
-   covers the rails the client can select outbound).
+   Mirrors public.money_accounts / transactions / balances and the
+   DB check constraints (receive-only domains: no wallet kinds,
+   no USDB, no legacy rails).
    ============================================================ */
 
-export type Currency = 'USD' | 'EUR' | 'USDB'
+export type Currency = 'USD' | 'EUR'
 
 export type Rail = 'ach_push' | 'wire' | 'fednow' | 'sepa' | 'base'
 
-export type AccountKind = 'us_checking' | 'eur_iban' | 'wallet'
+export type AccountKind = 'us_checking' | 'eur_iban'
 
 export type MoneyAccountRow = {
   id: string

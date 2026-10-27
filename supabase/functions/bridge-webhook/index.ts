@@ -11,17 +11,17 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
  * by bridge-accounts on provisioning); unverified or stale events are
  * rejected 401. Mirrors the current flat event schema: customer →
  * kyc_status, kyc_link → kyc + customer id, virtual_account →
- * money_accounts, bridge_wallet → wallet row (legacy users only),
- * transfer → transactions (upsert by `bridge_transfer_id`; deposits are
- * categorized external_sweep — swept money belongs to the user's own
- * wallet, not in-app balance). Processing is at-least-once: already
- * processed event ids answer 200 without re-running, failures answer
- * 5xx so Bridge redelivers. Every verified event is audited in
- * webhook_events. Secrets: SUPABASE service role (built-ins).
+ * money_accounts, transfer → transactions (upsert by
+ * `bridge_transfer_id`; deposits are categorized external_sweep — swept
+ * money belongs to the user's own wallet, not in-app balance). Processing
+ * is at-least-once: already processed event ids answer 200 without
+ * re-running, failures answer 5xx so Bridge redelivers. Every verified
+ * event is audited in webhook_events. Secrets: SUPABASE service role
+ * (built-ins).
  */
 
 const MAX_SKEW_MS = 600_000;
-const DECIMALS: Record<string, number> = { USD: 100, EUR: 100, USDB: 1_000_000 };
+const DECIMALS: Record<string, number> = { USD: 100, EUR: 100 };
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -31,7 +31,6 @@ const json = (body: unknown, status = 200) =>
 
 type CustomerObject = { id?: string; status?: string };
 type KycLinkObject = { id?: string; email?: string; kyc_status?: string; customer_id?: string };
-type WalletObject = { id?: string; chain?: string; address?: string; customer_id?: string };
 type VirtualAccountObject = {
   id?: string;
   status?: string;
@@ -59,7 +58,6 @@ type TransferObject = {
     currency?: string;
     virtual_account_id?: string;
     external_account_id?: string;
-    bridge_wallet_id?: string;
   };
   destination?: { payment_rail?: string; currency?: string; to_address?: string };
 };
@@ -181,7 +179,7 @@ Deno.serve(async (req: Request) => {
         if (link.id) {
           await db.schema("public").from("user_profiles").update(updates).eq("bridge_kyc_link_id", link.id);
         } else if (link.email) {
-          await db.schema("public").from("user_profiles").update(updates).eq("google_email", link.email);
+          await db.schema("public").from("user_profiles").update(updates).eq("email", link.email);
         }
       }
     } else if (category === "virtual_account") {
@@ -218,39 +216,12 @@ Deno.serve(async (req: Request) => {
             );
         }
       }
-    } else if (category === "bridge_wallet") {
-      const w = obj as WalletObject;
-      if (w.customer_id && w.id) {
-        const { data: owner } = await db
-          .schema("public")
-          .from("user_profiles")
-          .select("id")
-          .eq("bridge_customer_id", w.customer_id)
-          .single<{ id: string }>();
-        if (owner) {
-          await db
-            .schema("public")
-            .from("money_accounts")
-            .upsert(
-              {
-                user_id: owner.id,
-                bridge_account_id: w.id,
-                kind: "wallet",
-                currency: "USDB",
-                wallet_address: w.address ?? null,
-                rails: [w.chain ?? "base"],
-                status: "active",
-              },
-              { onConflict: "bridge_account_id" },
-            );
-        }
-      }
     } else if (category === "transfer") {
       const t = obj as TransferObject;
       const status = t.id ? mapTransfer(t.state ?? "") : null;
       if (status) {
         const isDeposit = Boolean(t.source?.virtual_account_id || t.source?.external_account_id);
-        const currency = (t.currency ?? t.source?.currency ?? t.destination?.currency ?? "usdb").toUpperCase();
+        const currency = (t.currency ?? t.source?.currency ?? t.destination?.currency ?? "usd").toUpperCase();
         const amountMinor = Math.round(Number(t.amount ?? 0) * (DECIMALS[currency] ?? 1_000_000));
         const rail = (t.source?.payment_rail ?? t.destination?.payment_rail ?? "base").toLowerCase();
 
@@ -264,7 +235,7 @@ Deno.serve(async (req: Request) => {
             .single<{ id: string }>();
           userId = owner?.id ?? null;
         }
-        const accountId = t.source?.virtual_account_id ?? t.source?.bridge_wallet_id ?? null;
+        const accountId = t.source?.virtual_account_id ?? null;
         if (!userId && accountId) {
           const { data: accRow } = await db
             .schema("public")
@@ -290,24 +261,10 @@ Deno.serve(async (req: Request) => {
             .update({ status })
             .eq("id", existing.id);
         } else if (userId) {
-          // Deposits sweeping to a wallet outside F&L custody are marked
-          // external_sweep so the balances view excludes them (that money
-          // is not spendable in-app); custody-bound deposits get ''.
-          let txCategory = "";
-          if (isDeposit) {
-            const { data: walletRow } = await db
-              .schema("public")
-              .from("money_accounts")
-              .select("wallet_address")
-              .eq("user_id", userId)
-              .eq("kind", "wallet")
-              .maybeSingle<{ wallet_address: string | null }>();
-            const custodyAddr = (walletRow?.wallet_address ?? "").toLowerCase();
-            const destAddr = (t.destination?.to_address ?? "").toLowerCase();
-            if (!custodyAddr || (destAddr && destAddr !== custodyAddr)) {
-              txCategory = "external_sweep";
-            }
-          }
+          // Every deposit sweeps to the user's own wallet (there is no
+          // in-app custody), so it is external_sweep — the balances view
+          // excludes it since that money is not spendable in-app.
+          const txCategory = isDeposit ? "external_sweep" : "";
           const inserted = await db
             .schema("public")
             .from("transactions")

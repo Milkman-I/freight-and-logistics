@@ -8,7 +8,6 @@ import type { TransactionRow } from '../types/money'
 export const CURRENCY_MACRO: Record<string, number> = {
   USD: 100,
   EUR: 100,
-  USDB: 1_000_000,
 }
 
 export function macroOf(currency: string): number {
@@ -27,22 +26,18 @@ export function money(minor: number, currency: string): string {
   const v = toMajor(minor, currency)
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: currency === 'USDB' ? 'USD' : currency,
+    currency,
     maximumFractionDigits: v < 1 && minor !== 0 ? 4 : 2,
     minimumFractionDigits: minor === 0 ? 2 : 0,
-  })
-    .format(v)
-    .concat(currency === 'USDB' ? ' USDB' : '')
+  }).format(v)
 }
 
 export function majorMoney(v: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: currency === 'USDB' ? 'USD' : currency,
+    currency,
     maximumFractionDigits: 2,
-  })
-    .format(v)
-    .concat(currency === 'USDB' ? ' USDB' : '')
+  }).format(v)
 }
 
 export function fmtDate(iso: string): string {

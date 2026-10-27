@@ -71,12 +71,7 @@ export function AccountDetails({
                 </div>
                 <div className="mt-3 flex gap-4">
                   {acc.routing_number && <Field label="Routing" value={mask(acc.routing_number)} />}
-                  {acc.account_number && acc.kind !== 'wallet' && (
-                    <Field label="Account" value={mask(acc.account_number)} />
-                  )}
-                  {acc.kind === 'wallet' && acc.wallet_address && (
-                    <Field label="Address" value={mask(acc.wallet_address)} />
-                  )}
+                  {acc.account_number && <Field label="Account" value={mask(acc.account_number)} />}
                 </div>
                 {acc.iban && (
                   <div className="mt-2">

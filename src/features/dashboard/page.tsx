@@ -69,7 +69,7 @@ export function Dashboard({ session }: { session: Session }) {
   const depositYear = settled.filter((t) => t.direction === 'in' && t.created_at >= yearAgo)
   const sendYear = settled.filter((t) => t.direction === 'out' && t.created_at >= yearAgo)
 
-  const primaryCurrency = balances.USDB !== undefined ? 'USDB' : balances.USD !== undefined ? 'USD' : balances.EUR !== undefined ? 'EUR' : 'USDB'
+  const primaryCurrency = balances.USD !== undefined ? 'USD' : balances.EUR !== undefined ? 'EUR' : 'USD'
   const totalBalance = money(balances[primaryCurrency] ?? 0, primaryCurrency)
 
   const chip = useMemo(() => {
