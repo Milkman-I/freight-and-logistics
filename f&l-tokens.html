@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>F&L — Brand Tokens · Lime Voltage</title>
+<style>
+  :root { font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #FFFFFF; color: #163300; padding: 48px 32px; }
+  h1 { font-size: 38px; letter-spacing: -0.02em; }
+  .sub { color: #45553B; font-size: 15.5px; margin: 10px 0 40px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.14em; color: #6B7A6E; margin: 44px 0 18px; }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; }
+  .chip { width: 168px; border-radius: 14px; overflow: hidden; border: 1px solid #E6EAE4; font-size: 12px; }
+  .chip .c { height: 84px; display: flex; align-items: flex-end; padding: 10px; font-weight: 700; }
+  .chip .n { padding: 10px 12px; background: #fff; color: #163300; line-height: 1.5; }
+  .chip .n b { display: block; font-size: 12.5px; }
+  .mode { border-radius: 20px; padding: 28px; margin-top: 6px; }
+  .mode-light { background: #FDFDFC; border: 1px solid #E6EAE4; }
+  .mode-dark { background: #12260A; color: #E9F5DF; }
+  .ui { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+  .btn { padding: 13px 24px; border-radius: 10px; font-weight: 700; font-size: 14px; }
+  .btn-primary { background: #9FE870; color: #163300; }
+  .btn-ghost { border: 1.5px solid #C4CCB4; color: #163300; font-weight: 600; }
+  .dark .btn { box-shadow: none; }
+  .pill { padding: 5px 12px; border-radius: 99px; font-size: 11.5px; font-weight: 700; }
+  .p-neutral { background: #E7EDE2; color: #45553B; }
+  .p-dark-neutral { background: #263F14; color: #B9E585; }
+  .p-success { background: #D6F5C0; color: #2E5B12; }
+  .p-warn { background: #FFE9B8; color: #8A5A00; }
+  .p-danger { background: #FDD9D7; color: #9B1C12; }
+  .p-danger2 { background: #652223; color: #FFB4AB; }
+  .balance-card { border-radius: 16px; padding: 20px 22px; min-width: 240px; }
+  .bc-light { background: #fff; border: 1px solid #E6EAE4; color: #163300; box-shadow: 0 1px 3px rgba(22,51,0,.06); }
+  .bc-dark { background: #1A2E0E; border: 1px solid #33461F; color: #E9F5DF; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; opacity: .6; }
+  .amount { font-size: 30px; font-weight: 800; letter-spacing: -.02em; margin: 6px 0 10px; }
+  .amt-pos { color: #3D8A15; }
+  .amt-pos-dark { color: #9FE870; }
+  code { background: #1633000d; padding: 2px 7px; border-radius: 6px; font-size: 12px; }
+  .dark code { background: #ffffff14; }
+</style>
+</head>
+<body>
+
+<h1>F&L Brand Tokens — <span style="color:#5B8A1E">Lime Voltage</span></h1>
+<p class="sub">Wise-inspired · light-first · dark mode included. Copy hexes straight into Tailwind/CSS.</p>
+
+<h2>1 · Core palette</h2>
+<div class="row">
+  <div class="chip"><div class="c" style="background:#163300;color:#9FE870">#163300</div><div class="n"><b>Forest Ink</b>Primary text · brand dark</div></div>
+  <div class="chip"><div class="c" style="background:#9FE870;color:#163300">#9FE870</div><div class="n"><b>Lime Voltage</b>Primary action · brand</div></div>
+  <div class="chip"><div class="c" style="background:#5B8A1E;color:#fff">#5B8A1E</div><div class="n"><b>Moss (Lime 700)</b>Links · hover states</div></div>
+  <div class="chip"><div class="c" style="background:#E9F5DF;color:#2E5B12">#E9F5DF</div><div class="n"><b>Spring (Lime 100)</b>Selections · tint bg</div></div>
+</div>
+
+<h2>2 · Neutrals</h2>
+<div class="row">
+  <div class="chip"><div class="c" style="background:#FDFDFC;color:#163300;border-bottom:1px solid #eee">#FDFDFC</div><div class="n"><b>Paper</b>Page background</div></div>
+  <div class="chip"><div class="c" style="background:#F3F5F0;color:#163300">#F3F5F0</div><div class="n"><b>Fog</b>Cards · inputs bg</div></div>
+  <div class="chip"><div class="c" style="background:#E6EAE4;color:#163300">#E6EAE4</div><div class="n"><b>Line</b>Borders · dividers</div></div>
+  <div class="chip"><div class="c" style="background:#45553B;color:#fff">#45553B</div><div class="n"><b>Slate Green</b>Secondary text</div></div>
+</div>
+
+<h2>3 · Semantic (status colors)</h2>
+<div class="row">
+  <div class="chip"><div class="c" style="background:#3D8A15;color:#fff">#3D8A15</div><div class="n"><b>Success</b>Deposits confirmed</div></div>
+  <div class="chip"><div class="c" style="background:#F5A623;color:#3B2A00">#F5A623</div><div class="n"><b>Warning</b>KYC pending · limbo</div></div>
+  <div class="chip"><div class="c" style="background:#E5484D;color:#fff">#E5484D</div><div class="n"><b>Danger</b>Errors · transfers failed</div></div>
+  <div class="chip"><div class="c" style="background:#0052FF;color:#fff">#0052FF</div><div class="n"><b>Info</b>System notices</div></div>
+</div>
+
+<h2>4 · Dashboard preview — Light mode</h2>
+<div class="mode mode-light">
+  <div class="ui">
+    <button class="btn btn-primary">Send money</button>
+    <button class="btn btn-ghost">Add funds</button>
+    <span class="pill p-neutral">KYC approved</span>
+    <span class="pill p-warn">KYC pending review</span>
+    <span class="pill p-success">Deposit confirmed</span>
+    <span class="pill p-danger">Transfer failed</span>
+  </div>
+  <div class="ui" style="margin-top:18px">
+    <div class="balance-card bc-light">
+      <div class="label">Total balance</div>
+      <div class="amount">$12,480.00</div>
+      <span class="pill p-neutral">USDB · Base</span>
+      &nbsp;
+      <span class="pill p-success">+2.1% APY</span>
+    </div>
+    <div class="balance-card bc-light">
+      <div class="label">Last deposit</div>
+      <div class="amount amt-pos" style="color:#3D8A15">+$250.00</div>
+      <div class="label">ACH · Today, 09:14</div>
+    </div>
+  </div>
+</div>
+
+<h2>5 · Dashboard preview — Dark mode</h2>
+<div class="mode mode-dark dark">
+  <div class="ui">
+    <button class="btn btn-primary">Send money</button>
+    <button class="btn btn-ghost" style="border-color:#33461F;color:#E9F5DF">Add funds</button>
+    <span class="pill p-dark-neutral">KYC approved</span>
+    <span class="pill p-success" style="background:#1C3A0C;color:#B9E585">Deposit confirmed</span>
+    <span class="pill p-danger2">Transfer failed</span>
+  </div>
+  <div class="ui" style="margin-top:18px">
+    <div class="balance-card bc-dark">
+      <div class="label">Total balance</div>
+      <div class="amount">$12,480.00</div>
+      <span class="pill p-dark-neutral">USDB · Base</span>
+      &nbsp;
+      <span class="pill p-success" style="background:#1C3A0C;color:#B9E585">+2.1% APY</span>
+    </div>
+    <div class="balance-card bc-dark">
+      <div class="label">Last deposit</div>
+      <div class="amount amt-pos-dark">+$250.00</div>
+      <div class="label">ACH · Today, 09:14</div>
+    </div>
+  </div>
+</div>
+
+<h2>6 · Ready-to-paste CSS variables</h2>
+<div class="mode mode-dark" style="font-size:13px; line-height:2">
+<pre style="font-family:ui-monospace,Menlo,monospace;white-space:pre-wrap">:root {
+  --brand-ink:      #163300;  /* text, headings               */
+  --brand-lime:     #9FE870;  /* primary CTA, links highlight */
+  --brand-moss:     #5B8A1E;  /* hover / active               */
+  --brand-spring:   #E9F5DF;  /* tint bg, selection           */
+  --bg-paper:       #FDFDFC;  /* page background              */
+  --bg-fog:         #F3F5F0;  /* cards, inputs                */
+  --border-line:    #E6EAE4;  /* borders                      */
+  --text-secondary: #45553B;  /* muted text                   */
+  --color-success:  #3D8A15;
+  --color-warning:  #F5A623;
+  --color-danger:   #E5484D;
+  --color-info:     #0052FF;
+}
+[data-theme="dark"] {
+  --brand-ink:      #E9F5DF;  /* text on dark                 */
+  --bg-paper:       #12260A;
+  --bg-fog:         #1A2E0E;
+  --border-line:    #33461F;
+  --text-secondary: #A9BCA0;
+}</pre>
+</div>
+
+</body>
+</html>

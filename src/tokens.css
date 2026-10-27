@@ -1,0 +1,40 @@
+/* ============================================================
+   F&L — Lime Voltage Design Tokens
+   Source of truth: /DESIGN-SYSTEM.md §2
+   Light theme is default; dark theme via [data-theme="dark"]
+   ============================================================ */
+
+:root {
+  /* Brand core */
+  --brand-ink: #163300;
+  --brand-lime: #9fe870;
+  --brand-moss: #5b8a1e;
+  --brand-spring: #e9f5df;
+  /* text on lime stays dark in BOTH themes (lime is always bright) */
+  --brand-on-lime: #163300;
+
+  /* Neutrals */
+  --bg-paper: #fdfdfc;
+  --bg-fog: #f3f5f0;
+  --border-line: #e6eae4;
+  --text-secondary: #45553b;
+
+  /* Semantic */
+  --color-success: #3d8a15;
+  --color-warning: #f5a623;
+  --color-danger: #e5484d;
+  --color-info: #0052ff;
+
+  /* Motion */
+  --motion-fast: 150ms ease-out;
+  --motion-base: 250ms ease-out;
+}
+
+[data-theme='dark'] {
+  --brand-ink: #e9f5df;
+  --brand-spring: #2a4012; /* hover/selected tints must stay dark-backed here */
+  --bg-paper: #12260a;
+  --bg-fog: #1a2e0e;
+  --border-line: #33461f;
+  --text-secondary: #a9bca0;
+}

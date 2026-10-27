@@ -1,0 +1,78 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+/*
+  F&L — Tailwind v4 theme mapping
+  Design tokens from DESIGN-SYSTEM.md exposed as utilities:
+  bg-paper, bg-fog, text-ink, border-line, bg-lime, etc.
+*/
+@theme {
+  --color-ink: var(--brand-ink);
+  --color-lime: var(--brand-lime);
+  --color-on-lime: var(--brand-on-lime);
+  --color-moss: var(--brand-moss);
+  --color-spring: var(--brand-spring);
+  --color-paper: var(--bg-paper);
+  --color-fog: var(--bg-fog);
+  --color-line: var(--border-line);
+  --color-muted: var(--text-secondary);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+  --color-info: var(--color-info);
+
+  --font-sans:
+    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --shadow-card: 0 1px 3px rgba(22, 51, 0, 0.06);
+}
+
+/* ============================================================
+   F&L motion — page-level transitions (DS §7: ≤250ms)
+   ============================================================ */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.page-enter {
+  animation: page-in 250ms ease-out both;
+}
+
+/* ============================================================
+   F&L toasts — right-side notification stack (App-level)
+   ============================================================ */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.toast-in {
+  animation: toast-in 250ms ease-out both;
+}
+
+/* Error dialog — centered modal */
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.dialog-in {
+  animation: dialog-in 250ms ease-out both;
+}
+

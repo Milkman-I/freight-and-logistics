@@ -1,0 +1,11 @@
+# dependencies & build
+node_modules/
+dist/
+
+# env & secrets — never commit
+.env
+.env.*
+
+# logs & OS noise
+*.log
+.DS_Store

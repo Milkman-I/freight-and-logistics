@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>F&L — Color Palette Direction Board</title>
+<style>
+  :root { font-family: Inter, system-ui, -apple-system, sans-serif; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #101014; color: #e9e9ee; padding: 48px 32px; }
+  h1 { font-size: 40px; letter-spacing: -0.02em; margin-bottom: 8px; }
+  .sub { color: #9a9aa8; font-size: 16px; margin-bottom: 48px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.14em; color: #7a7a88; margin: 56px 0 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+  .card { border-radius: 16px; overflow: hidden; background: #17171d; border: 1px solid #23232c; }
+  .card-head { padding: 18px 20px 4px; }
+  .card-head .name { font-weight: 700; font-size: 17px; }
+  .card-head .desc { color: #9a9aa8; font-size: 13.5px; margin-top: 6px; line-height: 1.5; }
+  .card-head .tag { display: inline-block; font-size: 11px; color: #9a9aa8; border: 1px solid #2c2c36; border-radius: 99px; padding: 3px 10px; margin-bottom: 10px; }
+  .swatches { display: flex; height: 110px; margin-top: 18px; }
+  .sw { flex: 1; display: flex; align-items: flex-end; padding: 10px; }
+  .sw span { font-size: 11px; font-weight: 600; opacity: 0.9; }
+  .demo { padding: 20px; }
+  .btn { display: inline-block; border: none; border-radius: 10px; padding: 12px 22px; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .btn-ghost { background: transparent; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>F&L — Palette Direction Board</h1>
+<p class="sub">Built from real reference: Wise, Mercury, Revolut, Coinbase, Nubank, Yellow Card. Pick a direction → we build the token system from it.</p>
+
+<h2>Direction 1 — Fresh Money (Wise-inspired)</h2>
+<div class="grid">
+  <div class="card">
+    <div class="card-head">
+      <span class="tag">Light theme · approachable · lowest-risk</span>
+      <div class="name">"Lime Voltage"</div>
+      <div class="desc">Optimistic, fast, trustworthy. Proven money-brand psychology: green = funds moving. Works beautifully in light UIs.</div>
+    </div>
+    <div class="swatches">
+      <div class="sw" style="background:#163300"><span style="color:#9FE870">#163300 Forest</span></div>
+      <div class="sw" style="background:#9FE870"><span style="color:#163300">#9FE870 Lime</span></div>
+      <div class="sw" style="background:#FFFFFF"><span style="color:#163300">#FFFFFF</span></div>
+      <div class="sw" style="background:#F2F5F0"><span style="color:#163300">#F2F5F0</span></div>
+      <div class="sw" style="background:#E5484D"><span style="color:#fff">#E5484D</span></div>
+    </div>
+    <div class="demo" style="background:#FFFFFF">
+      <button class="btn" style="background:#9FE870;color:#163300">Send money</button>
+      <button class="btn-ghost" style="color:#163300">View account →</button>
+    </div>
+  </div>
+</div>
+
+<h2>Direction 2 — Premium Tech (Mercury / Revolut-inspired)</h2>
+<div class="grid">
+  <div class="card">
+    <div class="card-head">
+      <span class="tag">Dark theme · premium · tech-native</span>
+      <div class="name">"Midnight Ledger"</div>
+      <div class="desc">Cinematic dark banking. Feels serious and high-end; the single indigo accent keeps it disciplined.</div>
+    </div>
+    <div class="swatches">
+      <div class="sw" style="background:#171721"><span style="color:#EDEDF3">#171721 Canvas</span></div>
+      <div class="sw" style="background:#1E1E2A"><span style="color:#EDEDF3">#1E1E2A Panel</span></div>
+      <div class="sw" style="background:#6C5CE7"><span style="color:#fff">#6C5CE7 Indigo</span></div>
+      <div class="sw" style="background:#EDEDF3"><span style="color:#171721">#EDEDF3 Ink</span></div>
+      <div class="sw" style="background:#F76B15"><span style="color:#fff">#F76B15</span></div>
+    </div>
+    <div class="demo" style="background:#171721">
+      <button class="btn" style="background:#6C5CE7;color:#fff">Deposit funds</button>
+      <button class="btn-ghost" style="color:#EDEDF3">Balances →</button>
+    </div>
+  </div>
+</div>
+
+<h2>Direction 3 — Corporate Trust (Coinbase-inspired)</h2>
+<div class="grid">
+  <div class="card">
+    <div class="card-head">
+      <span class="tag">Light theme · banking-grade · institution friendly</span>
+      <div class="name">"Signature Blue"</div>
+      <div class="desc">One disciplined blue. Reads as official and safe — good if you target businesses or want maximum credibility from day one.</div>
+    </div>
+    <div class="swatches">
+      <div class="sw" style="background:#0A0B0D"><span style="color:#fff">#0A0B0D Ink</span></div>
+      <div class="sw" style="background:#0052FF"><span style="color:#fff">#0052FF Blue</span></div>
+      <div class="sw" style="background:#E8F0FF"><span style="color:#0052FF">#E8F0FF Tint</span></div>
+      <div class="sw" style="background:#FFFFFF"><span style="color:#0A0B0D">#FFFFFF</span></div>
+      <div class="sw" style="background:#0FA824"><span style="color:#fff">#0FA824</span></div>
+    </div>
+    <div class="demo" style="background:#FFFFFF">
+      <button class="btn" style="background:#0052FF;color:#fff">Open account</button>
+      <button class="btn-ghost" style="color:#0A0B0D">Learn more →</button>
+    </div>
+  </div>
+</div>
+
+<h2>Direction 4 — Bold Emerging-Market (Nubank-style)</h2>
+<div class="grid">
+  <div class="card">
+    <div class="card-head">
+      <span class="tag">Light theme · warm · distinctive</span>
+      <div class="name">"F&L Violet"</div>
+      <div class="desc">Purple owns emerging-market banking (Nubank's playbook). Distinctive and warm — very hard to confuse with anyone else.</div>
+    </div>
+    <div class="swatches">
+      <div class="sw" style="background:#820AD1"><span style="color:#fff">#820AD1 Violet</span></div>
+      <div class="sw" style="background:#B333FF"><span style="color:#fff">#B333FF</span></div>
+      <div class="sw" style="background:#FFFFFF"><span style="color:#3F1E54">#FFFFFF</span></div>
+      <div class="sw" style="background:#F7F4FB"><span style="color:#820AD1">#F7F4FB</span></div>
+      <div class="sw" style="background:#00B8A9"><span style="color:#fff">#00B8A9</span></div>
+    </div>
+    <div class="demo" style="background:#FFFFFF">
+      <button class="btn" style="background:#820AD1;color:#fff">Get started</button>
+      <button class="btn-ghost" style="color:#820AD1">Explore →</button>
+    </div>
+  </div>
+</div>
+
+<h2>Direction 5 — Gulf Luxury (regional flavor)</h2>
+<div class="grid">
+  <div class="card">
+    <div class="card-head">
+      <span class="tag">Dark theme · regional identity · exclusive</span>
+      <div class="name">"Emirates Emerald"</div>
+      <div class="desc">Deep emerald + gold: privacy, wealth, heritage. Strong MENA identity if F&L wants a distinctly regional brand.</div>
+    </div>
+    <div class="swatches">
+      <div class="sw" style="background:#0B2B23"><span style="color:#C9A24B">#0B2B23</span></div>
+      <div class="sw" style="background:#124B3B"><span style="color:#fff">#124B3B Emerald</span></div>
+      <div class="sw" style="background:#C9A24B"><span style="color:#0B2B23">#C9A24B Gold</span></div>
+      <div class="sw" style="background:#F7F3EA"><span style="color:#0B2B23">#F7F3EA Sand</span></div>
+      <div class="sw" style="background:#8A2E1B"><span style="color:#fff">#8A2E1B</span></div>
+    </div>
+    <div class="demo" style="background:#0B2B23">
+      <button class="btn" style="background:#C9A24B;color:#0B2B23">Join F&L</button>
+      <button class="btn-ghost" style="color:#F7F3EA">Services →</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
