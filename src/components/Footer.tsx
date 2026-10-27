@@ -5,6 +5,7 @@
    ============================================================ */
 
 import { Link } from 'react-router-dom'
+import bridgeLogo from '../assets/bridge.svg'
 import { FOOTER_CONTENT } from '../constants/site'
 
 const SOCIALS = [
@@ -164,6 +165,15 @@ export function Footer() {
           <Link to="/terms" className="transition-colors hover:text-[#9FE870]">Terms of Service</Link>
           <p>{c.legal.copyright}</p>
           <Link to="/privacy" className="transition-colors hover:text-[#9FE870]">Privacy Policy</Link>
+          <a
+            href="https://bridge.xyz"
+            target="_blank"
+            rel="noreferrer noopener"
+            className="flex h-8 items-center gap-2 rounded-full bg-white px-3.5 transition-transform hover:-translate-y-0.5"
+          >
+            <span className="text-[11px] font-semibold text-[#45553B]">Powered by</span>
+            <img src={bridgeLogo} alt="Bridge" className="h-4 w-auto" />
+          </a>
         </div>
       </div>
     </footer>

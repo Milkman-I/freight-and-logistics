@@ -14,47 +14,56 @@ export const TERMS: LegalDoc = {
     {
       title: '1. About these terms',
       body: [
-        'These Terms of Service ("Terms") govern your access to and use of the F&L platform, including the website, your F&L account, dedicated virtual account details, and custodial wallet services (together, the "Services"). By creating an account or using the Services, you agree to be bound by these Terms.',
-        'Freight And Logistics LLC ("F&L") is a financial technology company, not a bank. Virtual account details are issued through partner banking institutions, and balances are held in custody 1:1 against asset-backed stablecoins.',
+        'These Terms of Service ("Terms") govern your access to and use of the F&L platform, including the website, your F&L account, dedicated virtual account details, and the automatic conversion-and-sweep of incoming payments (together, the "Services"). By creating an account or using the Services, you agree to be bound by these Terms.',
+        'Freight And Logistics LLC ("F&L") is a financial technology company, not a bank. Every money function of the Services — the accounts, the funds, the identity checks, the conversion, and the sweep — is provided and controlled by our payments provider, Bridge. See Section 2: we do not control your money at any point.',
       ],
     },
     {
-      title: '2. Eligibility & identity verification',
+      title: '2. The payments provider controls everything',
+      body: [
+        'F&L provides only this website and your dashboard. We do not hold, store, custody, access, move, or control your money at any point — not before, during, or after a payment. Nothing you deposit ever belongs to F&L or sits in F&L custody.',
+        'All financial activity is issued, held, and operated by our payments provider, Bridge (bridge.xyz), together with its partner institutions: virtual account details are issued by them, incoming funds are held by them, identity (KYC) and compliance decisions are made by them, conversion into stablecoins is executed by them, and the sweep of funds to the Base wallet you designate is performed by them.',
+        'Bridge also controls account actions: freezes, blocks, reversals, refunds, disclosures to banks or authorities, and any restriction on your ability to receive funds. These are provider decisions that F&L does not participate in and cannot influence or override.',
+        'Because we hold nothing and control nothing, F&L cannot retrieve, recover, reverse, or refund your funds. If funds are frozen, delayed, or lost at the provider, your recourse is against Bridge under Bridge\'s own terms — not against F&L. By using the Services you also accept Bridge\'s terms of service, which the app asks you to accept during onboarding.',
+      ],
+    },
+    {
+      title: '3. Eligibility & identity verification',
       body: [
         'You must be at least 18 years old and legally able to enter into binding contracts. To use the Services you must complete one-time identity verification ("KYC") through our automated check. You agree to provide accurate, current information and to respond to follow-up requests from our compliance team.',
         'We may refuse, delay, or reverse transactions — or restrict account features — where required by law, where verification is incomplete, or where we reasonably suspect fraud, sanctions exposure, or money laundering.',
       ],
     },
     {
-      title: '3. Your account',
+      title: '4. Your account',
       body: [
         'You are responsible for maintaining the confidentiality of your sign-in credentials and passkeys, and for all activity that occurs under your account. Notify us immediately at mohamed@freightandlogistics.online if you suspect unauthorized access.',
         'Dedicated US routing/account numbers and European IBANs issued to you remain the property of the issuing partner institution. You may not use the account details for unlawful activity, gambling where prohibited, or processing payments on behalf of third parties.',
       ],
     },
     {
-      title: '4. Receiving money',
+      title: '5. Receiving money',
       body: [
         'Incoming funds (ACH, FedNow, Wire, SEPA) are converted into stablecoins through our payments provider and swept to the Base wallet you designate as your deposit destination — usually within minutes of confirmation on the applicable rail, subject to networks outside our reasonable control.',
         'You must ensure the wallet address you designate is correct and belongs to you. Once funds have been swept to that address, recovery of funds sent to an incorrect or foreign destination cannot be guaranteed.',
       ],
     },
     {
-      title: '5. Fees & exchange rates',
+      title: '6. Fees & exchange rates',
       body: [
         'Conversion of incoming payments into stablecoins happens through our payments provider at the prevailing rate at the time of execution; we do not apply hidden spread markups. We publish the applicable fee schedule in the app before you use the Services.',
         'Balances held at our payments provider are not interest-bearing. F&L does not pay interest on balances.',
       ],
     },
     {
-      title: '6. Suspension & termination',
+      title: '7. Suspension & termination',
       body: [
         'You may close your account at any time, provided all pending activity is resolved and required record-keeping windows have passed. We may suspend or terminate access where breach of these Terms, applicable law, or compliance requirements require it.',
-        'On closure, remaining balances are returned to your linked bank account, subject to any deduction of amounts owed to F&L.',
+        'F&L holds no balances, so account closure affects only your access to the website and dashboard. Any funds still at the payments provider are handled entirely under Bridge\'s terms — typically swept to your designated Base wallet or returned through the provider\'s own procedures. We cannot and do not return, hold, or forward any funds ourselves.',
       ],
     },
     {
-      title: '7. Liability',
+      title: '8. Liability',
       body: [
         'We provide the Services "as is" without warranties of uninterrupted availability. To the extent permitted by law, F&L is not liable for indirect or consequential losses, including loss of profits or goodwill.',
         'Nothing in these Terms limits liability that cannot lawfully be limited. Questions about these Terms? Contact Freight And Logistics LLC: mohamed@freightandlogistics.online · +1 (201) 737-1175 · 25 Roseland Ave, 2FL, Caldwell NJ 07006.',

@@ -154,9 +154,16 @@ export function KycPage() {
     }
     setSetupBusy(true)
     try {
-      await provisionAccounts(customAddress.trim())
+      const res = await provisionAccounts(customAddress.trim())
       await load()
-      notify('Your accounts are ready — bank details are on the dashboard.', 'success')
+      // Surface provider notes — provisioning can partially fail while
+      // still answering 200 (the notes carry what didn't mirror).
+      const failing = (res.notes ?? []).filter((n) => !n.startsWith('vaccount_list: ok'))
+      if ((res.accounts?.length ?? 0) === 0 && failing.length > 0) {
+        notify('Bridge could not finish setting up your accounts — try again in a moment.', 'error')
+      } else {
+        notify('Your accounts are ready — bank details are on the dashboard.', 'success')
+      }
     } catch (e) {
       const slug = e instanceof Error ? e.message : 'request_failed'
       if (slug === 'deposit_destination_invalid' || slug === 'deposit_destination_required') {

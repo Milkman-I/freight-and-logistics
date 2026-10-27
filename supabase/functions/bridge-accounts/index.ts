@@ -65,6 +65,8 @@ type DepositInstructions = {
 type VirtualAccount = {
   id: string;
   status?: string;
+  currency?: string;
+  source?: { currency?: string };
   source_deposit_instructions?: DepositInstructions;
   destination?: { address?: string; currency?: string; payment_rail?: string };
 };
@@ -167,6 +169,34 @@ Deno.serve(async (req: Request) => {
 
   const upsertRow = (row: Record<string, unknown>) =>
     db.schema("public").from("money_accounts").upsert(row, { onConflict: "bridge_account_id" });
+  const mirrorVa = async (va: VirtualAccount, userId: string) => {
+    // Mirror one virtual account into money_accounts. Returns a short
+    // error tag instead of throwing — supabase-js resolves errors
+    // instead of rejecting, so they are otherwise invisible.
+    const sdi = va.source_deposit_instructions ?? {};
+    const isUsd = (
+      va.currency ??
+      va.source?.currency ??
+      sdi.currency ??
+      "usd"
+    ).toUpperCase() === "USD";
+    if (!va.id) return "missing_id";
+    const { error } = await upsertRow({
+      user_id: userId,
+      bridge_account_id: va.id,
+      kind: isUsd ? "us_checking" : "eur_iban",
+      currency: isUsd ? "USD" : "EUR",
+      routing_number: sdi.bank_routing_number ?? null,
+      account_number: sdi.bank_account_number ?? null,
+      iban: sdi.iban ?? null,
+      bank_name: sdi.bank_name ?? null,
+      beneficiary_name: sdi.bank_beneficiary_name ?? sdi.account_holder_name ?? null,
+      wallet_address: va.destination?.address ?? null,
+      rails: sdi.payment_rails ?? (isUsd ? ["ach_push", "fednow", "wire"] : ["sepa"]),
+      status: va.status === "deactivated" ? "failed" : "active",
+    });
+    return error ? `mirror:${error.message}` : null;
+  };
   const idemFor = (purpose: string) => `fl-${user.id.slice(0, 8)}-${purpose}`;
 
   // Deposit destination: REQUIRED — the user's own Base wallet. Validate
@@ -213,6 +243,31 @@ Deno.serve(async (req: Request) => {
   // stored) — required, never false-fallback.
   const destinationAddress = requestedNorm ?? stored;
 
+  // Self-healing first: mirror everything Bridge ALREADY holds for this
+  // customer (creation calls may have succeeded server-side while the
+  // mirror silently failed, or idempotency replays may have drifted).
+  const vlistRes = await get(`/customers/${cid}/virtual_accounts`);
+  const vlistJ = (await vlistRes.json().catch(() => null)) as
+    | VirtualAccount[]
+    | { data?: VirtualAccount[] }
+    | null;
+  if (vlistRes.ok) {
+    const vlist = (Array.isArray(vlistJ) ? vlistJ : ((vlistJ as { data?: VirtualAccount[] } | null)?.data ?? [])) as VirtualAccount[];
+    for (const va of vlist) {
+      if (!va?.id || rows.some((r) => r.bridge_account_id === va.id)) continue;
+      const err = await mirrorVa(va, user.id);
+      if (err) notes.push(err);
+    }
+    const { data: refreshed } = await db
+      .schema("public")
+      .from("money_accounts")
+      .select("id, currency, kind, bridge_account_id, wallet_address, account_number, iban")
+      .eq("user_id", user.id);
+    rows = (refreshed ?? []) as AccountRow[];
+  } else {
+    notes.push(`vaccount_list: ${vlistRes.status}`);
+  }
+
   if (!rows.some((a) => a.currency === "USD" && a.kind === "us_checking")) {
     const res = await post(
       `/customers/${cid}/virtual_accounts`,
@@ -227,21 +282,8 @@ Deno.serve(async (req: Request) => {
       notes.push(`us_vaccount: ${(await res.text()).slice(0, 220)}`);
     } else {
       const va = (await res.json()) as VirtualAccount;
-      const sdi = va.source_deposit_instructions ?? {};
-      await upsertRow({
-        user_id: user.id,
-        bridge_account_id: va.id,
-        kind: "us_checking",
-        currency: "USD",
-        routing_number: sdi.bank_routing_number ?? null,
-        account_number: sdi.bank_account_number ?? null,
-        iban: sdi.iban ?? null,
-        bank_name: sdi.bank_name ?? null,
-        beneficiary_name: sdi.bank_beneficiary_name ?? sdi.account_holder_name ?? null,
-        wallet_address: va.destination?.address ?? null,
-        rails: sdi.payment_rails ?? ["ach_push", "fednow", "wire"],
-        status: va.status === "deactivated" ? "failed" : "active",
-      });
+      const err = await mirrorVa(va, user.id);
+      if (err) notes.push(`us_${err}`);
     }
   }
 
@@ -259,21 +301,8 @@ Deno.serve(async (req: Request) => {
       notes.push(`eur_viban: ${(await res.text()).slice(0, 220)}`);
     } else {
       const va = (await res.json()) as VirtualAccount;
-      const sdi = va.source_deposit_instructions ?? {};
-      await upsertRow({
-        user_id: user.id,
-        bridge_account_id: va.id,
-        kind: "eur_iban",
-        currency: "EUR",
-        routing_number: sdi.bank_routing_number ?? null,
-        account_number: sdi.bank_account_number ?? null,
-        iban: sdi.iban ?? null,
-        bank_name: sdi.bank_name ?? null,
-        beneficiary_name: sdi.bank_beneficiary_name ?? sdi.account_holder_name ?? null,
-        wallet_address: va.destination?.address ?? null,
-        rails: sdi.payment_rails ?? ["sepa"],
-        status: va.status === "deactivated" ? "failed" : "active",
-      });
+      const err = await mirrorVa(va, user.id);
+      if (err) notes.push(`eur_${err}`);
     }
   }
 
