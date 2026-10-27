@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../services/supabase'
+import { fetchProfile } from '../../services/profiles'
 import { AppRail } from '../../components/AppRail'
 import { Logo } from '../../components/Logo'
 import { notify } from '../../components/Toast'
@@ -40,18 +41,21 @@ export function InvoicesPage() {
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [filter, setFilter] = useState('all')
+  const [approved, setApproved] = useState<boolean | null>(null) // null = unknown, DB trigger stays the backstop
 
   async function load() {
     const {
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) return
-    const [inv, acc] = await Promise.all([
+    const [inv, acc, prof] = await Promise.all([
       supabase.schema('public').from('invoices').select('*').order('created_at', { ascending: false }),
       supabase.schema('public').from('money_accounts').select('*').eq('user_id', user.id),
+      fetchProfile(user.id).catch(() => null),
     ])
     if (inv.error) notify(inv.error.message, 'error')
     if (acc.error) notify(acc.error.message, 'error')
+    if (prof) setApproved(prof.kyc_status === 'approved')
     setInvoices((inv.data ?? []) as InvoiceRow[])
     setAccounts((acc.data ?? []) as MoneyAccountRow[])
     setLoading(false)
@@ -63,6 +67,7 @@ export function InvoicesPage() {
 
   async function create(e: React.FormEvent) {
     e.preventDefault()
+    if (approved === false) return notify('Verify your identity first — invoicing unlocks right after.', 'error')
     const num = Number(amount)
     if (!clientName.trim()) return notify('Add the client name.', 'error')
     if (!Number.isFinite(num) || num <= 0) return notify('Enter an invoice amount above zero.', 'error')
@@ -87,7 +92,11 @@ export function InvoicesPage() {
       .select('*')
       .single()
     setBusy(false)
-    if (error) return notify('Could not create the invoice — try again.', 'error')
+    if (error) {
+      if (error.message.includes('kyc_not_approved'))
+        return notify('Verify your identity first — invoicing unlocks right after.', 'error')
+      return notify('Could not create the invoice — try again.', 'error')
+    }
     setInvoices((s) => [data as InvoiceRow, ...s])
     notify(`Invoice ${(data as InvoiceRow).number} created — send the client your payment details.`, 'success')
     setFormOpen(false)
@@ -198,13 +207,22 @@ export function InvoicesPage() {
               ]}
               className="w-40"
             />
-            <button
-              onClick={() => setFormOpen((o) => !o)}
-              className="flex h-11 items-center gap-2 rounded-full bg-lime px-4 text-sm font-bold text-on-lime transition-opacity hover:opacity-90"
-            >
-              <I d={ICONS.invoice} className="h-4 w-4" />
-              {formOpen ? 'Close form' : 'New invoice'}
-            </button>
+            {approved === false ? (
+              <button
+                onClick={() => navigate('/kyc')}
+                className="flex h-11 items-center rounded-full border-[1.5px] border-moss px-4 text-sm font-bold text-moss transition-colors hover:bg-spring"
+              >
+                Verify identity to create invoices →
+              </button>
+            ) : (
+              <button
+                onClick={() => setFormOpen((o) => !o)}
+                className="flex h-11 items-center gap-2 rounded-full bg-lime px-4 text-sm font-bold text-on-lime transition-opacity hover:opacity-90"
+              >
+                <I d={ICONS.invoice} className="h-4 w-4" />
+                {formOpen ? 'Close form' : 'New invoice'}
+              </button>
+            )}
           </div>
 
           {formOpen && (

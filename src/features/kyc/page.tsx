@@ -62,13 +62,34 @@ export function KycPage() {
     return () => window.removeEventListener('focus', onFocus)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    // while Bridge reviews, re-sync periodically so approval clears itself
+    if (profile?.kyc_status !== 'under_review') return
+    const t = setInterval(() => void load(), 15000)
+    return () => clearInterval(t)
+  }, [profile?.kyc_status]) // eslint-disable-line react-hooks/exhaustive-deps
+
   async function onVerify() {
     if (!profile) return
     setBusy(true)
     try {
-      // onboard reopens the user's one and only kyc link (self-healing);
-      // fall back to the stored link's URL when the response omits one
-      const url = (await onboardKyc(profile)) ?? (await startKycUrl())
+      // reopen the user's one and only kyc link (self-healing). A settled
+      // outcome refreshes in place — no Persona trip; anything still open
+      // goes straight to the hosted verification (falls back to the
+      // stored link's URL when the response omits one)
+      const link = await onboardKyc(profile)
+      if (link.kyc_status === 'approved' || link.kyc_status === 'rejected') {
+        await load()
+        notify(
+          link.kyc_status === 'approved'
+            ? "You're verified — every money feature is unlocked."
+            : 'Verification was declined — contact support if this looks wrong.',
+          link.kyc_status === 'approved' ? 'success' : 'error',
+        )
+        setBusy(false)
+        return
+      }
+      const url = link.redirect_url ?? (await startKycUrl())
       window.location.assign(url)
     } catch (e) {
       const slug = e instanceof Error ? e.message : 'request_failed'

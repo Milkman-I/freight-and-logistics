@@ -85,13 +85,15 @@ export function TransferForm({
       routing,
       destAccount,
       iban,
-      address,
-      note,
+      address: address.trim(),
+      note: note.trim(),
     }
     const dest = destination()
     if (!from || !values.rail) return notify('Choose an account to send from.', 'error')
     if (!values.recipient) return notify('Add the recipient name.', 'error')
     if (!dest) return notify('Add the recipient bank / wallet details.', 'error')
+    if (values.rail === 'base' && !/^0x[a-fA-F0-9]{40}$/.test(values.address))
+      return notify('Enter a valid wallet address — 0x followed by 40 hex characters.', 'error')
     if (!Number.isFinite(amountNum) || amountNum <= 0)
       return notify('Enter an amount above zero.', 'error')
     if (insufficient)

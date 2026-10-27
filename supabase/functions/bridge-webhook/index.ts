@@ -13,7 +13,9 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
  * kyc_status, kyc_link → kyc + customer id, virtual_account →
  * money_accounts, bridge_wallet → wallet row, transfer → transactions
  * (settled incoming payments auto-match the oldest open invoice of the
- * same amount + currency). Every verified event is audited in
+ * same amount + currency). Processing is at-least-once: already
+ * processed event ids answer 200 without re-running, failures answer
+ * 5xx so Bridge redelivers. Every verified event is audited in
  * webhook_events. Secrets: SUPABASE service role (built-ins).
  */
 
@@ -35,6 +37,7 @@ type VirtualAccountObject = {
   customer_id?: string;
   source_deposit_instructions?: {
     currency?: string;
+    payment_rails?: string[];
     bank_name?: string;
     bank_beneficiary_name?: string;
     account_holder_name?: string;
@@ -144,6 +147,16 @@ Deno.serve(async (req: Request) => {
   const eventType = event.event_type ?? "";
   const obj = event.event_object ?? {};
 
+  // at-least-once delivery: skip events already fully processed
+  if (event.event_id) {
+    const { data: seen } = await db
+      .from("webhook_events")
+      .select("processed")
+      .eq("bridge_event_id", event.event_id)
+      .maybeSingle<{ processed: boolean }>();
+    if (seen?.processed) return json({ received: true, duplicate: true });
+  }
+
   let errorNote: string | null = null;
 
   try {
@@ -198,7 +211,7 @@ Deno.serve(async (req: Request) => {
                 bank_name: sdi.bank_name ?? null,
                 beneficiary_name: sdi.bank_beneficiary_name ?? sdi.account_holder_name ?? null,
                 wallet_address: acc.destination?.address ?? null,
-                rails: [],
+                rails: sdi.payment_rails ?? [],
                 status: acc.status === "deactivated" ? "failed" : "active",
               },
               { onConflict: "bridge_account_id" },
@@ -335,5 +348,7 @@ Deno.serve(async (req: Request) => {
     processing_error: errorNote,
   });
 
+  // 5xx makes Bridge redeliver — processing should be retried, not dropped
+  if (errorNote) return json({ error: "processing_failed", detail: errorNote }, 500);
   return json({ received: true });
 });

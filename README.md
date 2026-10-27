@@ -65,7 +65,7 @@ Edge Functions (`supabase/functions/`, deployed):
 | `bridge-customer` | ✅ | creates/resumes the user's Bridge **kyc link** (`POST /v0/kyc_links`, `Api-Key` header), syncs `kyc_status` + `bridge_customer_id`; self-healing — Bridge allows one kyc link per email, so a `duplicate_record` rejection adopts the existing link and re-opens it instead of erroring (abandoned-mid-Persona users always get their original link back); every success response carries `redirect_url` |
 | `bridge-kyc-link` | ✅ | returns the hosted Persona verification URL for the stored kyc link |
 | `bridge-accounts` | ✅ | idempotent provisioning for approved customers: Base custody wallet (USDB) → USD virtual account (ACH push/FedNow/Wire) → EUR virtual IBAN (SEPA); registers + activates the Bridge webhook endpoint and stores its RSA public key in `bridge_config` |
-| `bridge-webhook` | ❌ | single receiver for all Bridge events; RSA signature verification (`X-Webhook-Signature: t=…,v0=…` against the `bridge_config` public key). New flat event schema only: `customer.*` → `kyc_status`, `kyc_link.*` → kyc + customer id, `virtual_account*` → `money_accounts`, `bridge_wallet*` → wallet row, `transfer.*` → `transactions` (upsert by `bridge_transfer_id`, settled incoming payments auto-mark matching invoices paid) |
+| `bridge-webhook` | ❌ | single receiver for all Bridge events; RSA signature verification (`X-Webhook-Signature: t=…,v0=…` against the `bridge_config` public key). New flat event schema only: `customer.*` → `kyc_status`, `kyc_link.*` → kyc + customer id, `virtual_account*` → `money_accounts`, `bridge_wallet*` → wallet row, `transfer.*` → `transactions` (upsert by `bridge_transfer_id`, settled incoming payments auto-mark matching invoices paid). At-least-once: processed event ids answer 200 without re-running, failures answer 5xx for redelivery |
 | `bridge-create-transfer` | ✅ | submits the user's `pending` tx row as a real Bridge transfer — wallet-funded (`source: {payment_rail: "bridge_wallet", bridge_wallet_id}` from their custody wallet row) to `destination.to_address`, `Idempotency-Key`; links `bridge_transfer_id` or flips the row to `failed` |
 
 Database (canonical migrations now in `supabase/migrations/*` — single source of truth; never hand-apply via dashboard):
@@ -80,7 +80,8 @@ Database (canonical migrations now in `supabase/migrations/*` — single source 
 | `20261027093000_add_kyc_link.sql` | `user_profiles.bridge_kyc_link_id` (KYC-link first onboarding) |
 | `20261027100000_money_accounts_new_bridge.sql` | `money_accounts.bank_name` / `beneficiary_name` / `wallet_address` (current Bridge deposit-instruction data) |
 | `20261027103000_bridge_config.sql` | `bridge_config` — webhook endpoint RSA public key + registration metadata (no secrets; service-role only) |
-| `20261027110000_transactions_rail_new_bridge.sql` | `transactions.rail` constraint → current Bridge rails (`ach_push`, `bridge_wallet`, `static_memo`; legacy `ach` removed) |
+| `20261027110000_transactions_rail_new_bridge.sql` | `transactions.rail` constraint → current Bridge rails (`ach_push | fednow | wire | sepa | base | bridge_wallet | static_memo`) |
+| `20261027124000_invoices_kyc_gate.sql` | `invoices_kyc_gate` trigger — only KYC-approved customers may insert invoices (enforced in-database, holds against direct writes) |
 
 - **`user_profiles`** — `id` (= auth.users), `google_email`, `full_name`, `avatar_url`, `bridge_customer_id`, `bridge_kyc_link_id`, `kyc_status` (`not_started | under_review | incomplete | approved | rejected`). The `guard_user_profile` trigger blocks non-service updates to `kyc_status` / `bridge_customer_id` / `google_email`.
 

@@ -41,15 +41,14 @@ async function callFn<T = Record<string, unknown>>(
   return json as T
 }
 
-/** create (or resume) the user's Bridge KYC link; returns the hosted URL */
-export async function onboardKyc(
+/** create (or resume) the user's Bridge KYC link; returns link status + hosted URL */
+export function onboardKyc(
   profile: Pick<UserProfile, 'full_name' | 'google_email'>,
-): Promise<string | null> {
-  const link = await callFn<{ redirect_url?: string }>('bridge-customer', {
+): Promise<{ kyc_status?: string; redirect_url?: string }> {
+  return callFn('bridge-customer', {
     full_name: profile.full_name || profile.google_email.split('@')[0] || 'F&L customer',
     redirect_uri: `${window.location.origin}/kyc/done`,
   })
-  return link.redirect_url ?? null
 }
 
 /** the hosted verification URL from the user's stored kyc link */

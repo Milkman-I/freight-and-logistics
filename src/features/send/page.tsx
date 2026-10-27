@@ -63,10 +63,10 @@ export function SendPage() {
         recipient: values.recipient,
         note: values.note,
       })
-      // push the row into a real Bridge transfer; wallet rails use the
-      // recipient as the payout address, bank rails fail fast with an
-      // explicit error until a structured recipient form exists
-      await sendToBridge(tx.id, { walletAddress: values.recipient })
+      // push the row into a real Bridge transfer; the wallet-address field
+      // is the payout destination, bank rails send no address so the
+      // function fail-fasts with explicit guidance
+      await sendToBridge(tx.id, { walletAddress: values.rail === 'base' ? values.address : undefined })
       setSent({
         id: tx.id,
         amount: majorMoney(toMajor(tx.amount_minor, tx.currency), tx.currency),

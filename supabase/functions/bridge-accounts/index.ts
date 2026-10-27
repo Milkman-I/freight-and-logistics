@@ -70,6 +70,9 @@ type AccountRow = {
   currency: string;
   kind: string;
   bridge_account_id: string | null;
+  wallet_address: string | null;
+  account_number: string | null;
+  iban: string | null;
 };
 
 type WebhookEndpoint = {
@@ -144,9 +147,27 @@ Deno.serve(async (req: Request) => {
   const { data: existing } = await db
     .schema("public")
     .from("money_accounts")
-    .select("id, currency, kind, bridge_account_id")
+    .select("id, currency, kind, bridge_account_id, wallet_address, account_number, iban")
     .eq("user_id", user.id);
-  const rows = (existing ?? []) as AccountRow[];
+  let rows = (existing ?? []) as AccountRow[];
+
+  // a mirror row without the data it mirrors is unreachable — drop it so
+  // the stable idempotency keys below replay Bridge's last good response
+  // (or provision fresh)
+  const empty = rows.filter((a) =>
+    a.kind === "wallet"
+      ? !a.wallet_address
+      : a.currency === "USD"
+      ? !a.account_number
+      : a.currency === "EUR"
+      ? !a.iban
+      : false,
+  );
+  if (empty.length > 0) {
+    await db.from("money_accounts").delete().in("id", empty.map((a) => a.id));
+    rows = rows.filter((a) => !empty.includes(a));
+  }
+
   const upsertRow = (row: Record<string, unknown>) =>
     db.schema("public").from("money_accounts").upsert(row, { onConflict: "bridge_account_id" });
   const idemFor = (purpose: string) => `fl-${user.id.slice(0, 8)}-${purpose}`;
