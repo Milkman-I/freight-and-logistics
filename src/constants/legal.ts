@@ -9,13 +9,13 @@ export type LegalDoc = { title: string; updated: string; sections: LegalSection[
 
 export const TERMS: LegalDoc = {
   title: 'Terms of Service',
-  updated: '22 October 2026',
+  updated: '27 October 2026',
   sections: [
     {
       title: '1. About these terms',
       body: [
         'These Terms of Service ("Terms") govern your access to and use of the F&L platform, including the website, your F&L account, dedicated virtual account details, and custodial wallet services (together, the "Services"). By creating an account or using the Services, you agree to be bound by these Terms.',
-        'F&L is a financial technology company, not a bank. Virtual account details are issued through partner banking institutions, and balances are held in custody 1:1 against asset-backed stablecoins.',
+        'Freight And Logistics LLC ("F&L") is a financial technology company, not a bank. Virtual account details are issued through partner banking institutions, and balances are held in custody 1:1 against asset-backed stablecoins.',
       ],
     },
     {
@@ -28,7 +28,7 @@ export const TERMS: LegalDoc = {
     {
       title: '3. Your account',
       body: [
-        'You are responsible for maintaining the confidentiality of your sign-in credentials and passkeys, and for all activity that occurs under your account. Notify us immediately at hello@fandl.money if you suspect unauthorized access.',
+        'You are responsible for maintaining the confidentiality of your sign-in credentials and passkeys, and for all activity that occurs under your account. Notify us immediately at mohamed@freightandlogistics.online if you suspect unauthorized access.',
         'Dedicated US routing/account numbers and European IBANs issued to you remain the property of the issuing partner institution. You may not use the account details for unlawful activity, gambling where prohibited, or processing payments on behalf of third parties.',
       ],
     },
@@ -57,7 +57,7 @@ export const TERMS: LegalDoc = {
       title: '7. Liability',
       body: [
         'We provide the Services "as is" without warranties of uninterrupted availability. To the extent permitted by law, F&L is not liable for indirect or consequential losses, including loss of profits or goodwill.',
-        'Nothing in these Terms limits liability that cannot lawfully be limited. Questions about these Terms? Contact hello@fandl.money.',
+        'Nothing in these Terms limits liability that cannot lawfully be limited. Questions about these Terms? Contact Freight And Logistics LLC: mohamed@freightandlogistics.online · +1 (201) 737-1175 · 25 Roseland Ave, 2FL, Caldwell NJ 07006.',
       ],
     },
   ],
@@ -65,7 +65,7 @@ export const TERMS: LegalDoc = {
 
 export const PRIVACY: LegalDoc = {
   title: 'Privacy Policy',
-  updated: '22 October 2026',
+  updated: '27 October 2026',
   sections: [
     {
       title: '1. What we collect',
@@ -97,13 +97,13 @@ export const PRIVACY: LegalDoc = {
     {
       title: '5. Your rights',
       body: [
-        'You may request access to, correction of, or deletion of your personal data, and may object to certain processing. Email hello@fandl.money and we will respond within the window required by applicable law.',
+        'You may request access to, correction of, or deletion of your personal data, and may object to certain processing. Email mohamed@freightandlogistics.online and we will respond within the window required by applicable law.',
       ],
     },
     {
       title: '6. Contact',
       body: [
-        'F&L operates this Service. For any privacy question, request, or complaint, contact hello@fandl.money. This policy covers the website and app; partner banking institutions maintain their own notices.',
+        'Freight And Logistics LLC ("F&L") operates this Service. For any privacy question, request, or complaint, contact mohamed@freightandlogistics.online · +1 (201) 737-1175, or write to 25 Roseland Ave, 2FL, Caldwell NJ 07006. This policy covers the website and app; partner banking institutions maintain their own notices.',
       ],
     },
   ],

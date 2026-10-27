@@ -43,9 +43,9 @@ export const FINAL_CTA = {
 export const FOOTER_CONTENT = {
   headline: ['Start your journey', 'with us.'] as [string, string],
   info: [
-    { label: 'Locations', lines: ['1 Market Street, Suite 20', 'San Francisco, CA'] },
-    { label: 'Call us', lines: ['+1 (234) 567-890'] },
-    { label: 'Contact us', lines: ['hello@fandl.money'] },
+    { label: 'Headquarters', lines: ['25 Roseland Ave, 2FL', 'Caldwell, NJ 07006'] },
+    { label: 'Call us', lines: ['+1 (201) 737-1175'] },
+    { label: 'Contact us', lines: ['mohamed@freightandlogistics.online'] },
     { label: 'Support hours', lines: ['24 / 7 · every day'] },
   ],
   navigation: ['Home', 'Personal', 'Business', 'About'],
@@ -55,5 +55,5 @@ export const FOOTER_CONTENT = {
     body: 'Your first transfer is on us — 0% fees when you send money for the first time.',
   },
   subscribe: { label: 'Subscribe for updates', placeholder: 'Enter your email' },
-  legal: { copyright: '© Copyright 2026. All rights reserved' },
+  legal: { copyright: '© Copyright 2026 Freight And Logistics LLC. All rights reserved' },
 }
