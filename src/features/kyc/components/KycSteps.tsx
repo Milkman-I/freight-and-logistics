@@ -5,7 +5,7 @@
 export const KYC_STEPS = [
   { n: '01', title: 'Verify your identity', body: 'A short automated check with your passport or national ID — usually done in under a minute.' },
   { n: '02', title: 'Unlock bank details', body: 'Real US routing + account numbers and European IBANs issued in your name.' },
-  { n: '03', title: 'Money goes live', body: 'Collect on ACH, FedNow, Wire and SEPA. Hold it 1:1 backed, send anywhere.' },
+  { n: '03', title: 'Money goes live', body: 'Collect on ACH, FedNow, Wire and SEPA — every deposit sweeps straight to your own Base wallet.' },
 ] as const
 
 export function KycSteps() {
