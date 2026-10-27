@@ -1,7 +1,9 @@
 /*
-  features/invoices — /invoices. Real invoices in Postgres; settlement is
-  auto-detected by the Bridge webhook (an incoming transfer that settles
-  with the invoice's exact amount+currency flips it to paid).
+  features/invoices — /invoices. Real invoices in Postgres; creation is
+  KYC-gated (invoices_kyc_gate trigger — only approved customers may
+  insert). Settlement is auto-detected by the Bridge webhook (an incoming
+  transfer that settles with the invoice's exact amount+currency flips
+  it to paid).
 */
 
 import { useEffect, useState } from 'react'

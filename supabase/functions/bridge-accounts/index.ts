@@ -6,7 +6,9 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
  * infrastructure (idempotent): a Base custody wallet (USDB), a USD virtual
  * account (ACH push/FedNow/Wire deposits → USDC to the wallet) and a EUR
  * virtual IBAN (SEPA deposits → EURC). Deposit instructions are mirrored
- * into money_accounts directly from the API responses. Also registers +
+ * into money_accounts directly from the API responses; a mirror row
+ * missing the data it mirrors is dropped and re-provisioned (the stable
+ * idempotency keys replay Bridge's last good response). Also registers +
  * activates the Bridge webhook endpoint and persists its RSA public key in
  * bridge_config. JWT auth. Secrets: BRIDGE_API_KEY · ALLOWED_ORIGINS
  * (optional) · BRIDGE_API_URL (optional, overrides api.bridge.xyz/v0).
@@ -151,9 +153,6 @@ Deno.serve(async (req: Request) => {
     .eq("user_id", user.id);
   let rows = (existing ?? []) as AccountRow[];
 
-  // a mirror row without the data it mirrors is unreachable — drop it so
-  // the stable idempotency keys below replay Bridge's last good response
-  // (or provision fresh)
   const empty = rows.filter((a) =>
     a.kind === "wallet"
       ? !a.wallet_address

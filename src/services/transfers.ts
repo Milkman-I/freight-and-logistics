@@ -3,7 +3,9 @@
    Client-side outgoing transfer initiation. Only direction='out',
    status='pending' may be inserted by a user (RLS policy
    "transactions_insert_own_out") — the Bridge webhook takes over
-   from there (pending → settled / failed).
+   from there (pending → settled / failed). The 0x wallet-address
+   field is the payout destination; bank rails fail fast server-side
+   until a structured recipient form exists.
    ============================================================ */
 
 import { supabase } from './supabase'
@@ -47,13 +49,6 @@ export async function createTransfer(
   return data as TransactionRow
 }
 
-/**
- * Submit the freshly-created pending row to Bridge via the
- * `bridge-create-transfer` Edge Function (user JWT auth; authoritative
- * amount/currency come from the DB row, never the request body).
- * The row may end up 'failed' (Bridge rejected it) or move to its real
- * lifecycle — the transfer.updated webhook owns it from here on.
- */
 export async function sendToBridge(
   transactionId: string,
   opts: { walletAddress?: string } = {},

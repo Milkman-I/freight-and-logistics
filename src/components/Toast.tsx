@@ -1,6 +1,7 @@
 /**
  * Global notifications (Lime Voltage).
  *  · success / info → toast stack, fixed top-right, auto-dismisses
+ *    (stack capped at 4 so bursts of failures can't flood the screen)
  *  · error          → centered modal popup, dismissed by the user
  * notify(message, kind) from anywhere; <Toasts/> + <ErrorDialog/> mount
  * once in App.
@@ -29,7 +30,6 @@ function push(message: string, kind: ToastKind): number {
     dialogs = [...dialogs, t]
   } else {
     playSuccess()
-    // cap the toast stack at 4 — flood-safe when several fail at once
     toasts = [...toasts, t].slice(-4)
     const timer = window.setTimeout(() => dismissToast(t.id), 6000)
     dismissTimers.set(t.id, timer)
@@ -78,8 +78,6 @@ const KIND_CLS: Record<ToastKind, { border: string; icon: string; iconCls: strin
   info: { border: 'border-l-[#8FA385]', icon: 'ℹ', iconCls: 'text-[#DDE7D6]' },
 }
 
-/* ---------------------------------------------------------- toasts (right) */
-
 export function Toasts() {
   const stack = useToasts()
   if (stack.length === 0) return null
@@ -110,8 +108,6 @@ export function Toasts() {
     </div>
   )
 }
-
-/* ------------------------------------------------- error dialog (centered) */
 
 export function ErrorDialog() {
   const stack = useErrorDialogs()

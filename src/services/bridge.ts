@@ -1,8 +1,10 @@
 /**
  * F&L — Bridge client. Calls the deployed Edge Functions (bridge-customer,
  * bridge-kyc-link, bridge-accounts) with the user's access token; the
- * browser never touches Bridge directly. Money-mutating writes happen
- * server-side via the Bridge webhook.
+ * browser never touches Bridge directly. KYC link onboarding reopens the
+ * user's one link per email (self-healing server-side) and carries
+ * redirect_url on every success. Money-mutating writes happen server-side
+ * via the Bridge webhook.
  */
 
 import { supabase } from './supabase'
@@ -34,14 +36,12 @@ async function callFn<T = Record<string, unknown>>(
     }
     err.status = res.status
     err.detail = json.detail
-    // operator diagnostics stay in the console — user sees only the soft copy
     if (err.detail) console.warn(`[${name}] provider detail:`, err.detail)
     throw err
   }
   return json as T
 }
 
-/** create (or resume) the user's Bridge KYC link; returns link status + hosted URL */
 export function onboardKyc(
   profile: Pick<UserProfile, 'full_name' | 'google_email'>,
 ): Promise<{ kyc_status?: string; redirect_url?: string }> {
@@ -51,19 +51,16 @@ export function onboardKyc(
   })
 }
 
-/** the hosted verification URL from the user's stored kyc link */
 export async function startKycUrl(): Promise<string> {
   const link = await callFn<{ redirect_url: string }>('bridge-kyc-link', {})
   if (!link.redirect_url) throw new Error('no_redirect')
   return link.redirect_url
 }
 
-/** fetch the user's kyc link state server-side and sync the profile */
 export function syncKyc(): Promise<{ kyc_status?: string; customer_id?: string; redirect_url?: string }> {
   return callFn('bridge-customer', {})
 }
 
-/** provision (idempotently) wallet + virtual accounts + webhook endpoint */
 export function provisionAccounts(): Promise<{
   accounts: MoneyAccountRow[]
   wallet_address?: string

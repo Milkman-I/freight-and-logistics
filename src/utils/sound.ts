@@ -16,7 +16,6 @@ function play(url: string, volume: number) {
   void a.play().catch(() => {})
 }
 
-// prewarm both files during the first gesture so autoplay never blocks us
 if (typeof window !== 'undefined') {
   const unlock = () => {
     if (unlocked) return
@@ -33,12 +32,10 @@ if (typeof window !== 'undefined') {
   window.addEventListener('keydown', unlock, true)
 }
 
-/** descending two-note buzz (error.wav) */
 export function playError() {
   play(errorUrl, 0.65)
 }
 
-/** rising bell arpeggio (success.wav) */
 export function playSuccess() {
   play(successUrl, 0.6)
 }

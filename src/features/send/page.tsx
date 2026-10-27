@@ -1,8 +1,10 @@
 /*
   features/send — /send, real outgoing transfer initiation.
   Inserts only direction='out', status='pending' — the exact write
-  the transactions RLS policy allows from the client. The Bridge
-  webhook takes over from there (status → settled/failed).
+  the transactions RLS policy allows from the client. The 0x
+  wallet-address field is the payout destination; bank rails fail
+  fast server-side. The Bridge webhook takes over from there
+  (status → settled/failed).
 */
 
 import { useEffect, useState } from 'react'
@@ -63,9 +65,6 @@ export function SendPage() {
         recipient: values.recipient,
         note: values.note,
       })
-      // push the row into a real Bridge transfer; the wallet-address field
-      // is the payout destination, bank rails send no address so the
-      // function fail-fasts with explicit guidance
       await sendToBridge(tx.id, { walletAddress: values.rail === 'base' ? values.address : undefined })
       setSent({
         id: tx.id,

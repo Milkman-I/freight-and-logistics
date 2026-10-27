@@ -5,11 +5,6 @@
 
 import { useEffect, useId, useRef, useState } from 'react'
 
-/**
- * Select — custom dropdown (native <select> skin rejected so we control
- * the look in both themes). Click/keyboard accessible: ↑↓ move, Enter
- * or Space select, Esc closes, Tab closes, click-outside closes.
- */
 export function Select({
   value,
   onChange,
@@ -42,7 +37,6 @@ export function Select({
     return () => window.removeEventListener('pointerdown', onDown)
   }, [open])
 
-  // keep the highlighted option visible while keyboard-navigating
   useEffect(() => {
     if (open && listRef.current?.children[active]) {
       listRef.current.children[active].scrollIntoView({ block: 'nearest' })

@@ -147,7 +147,6 @@ Deno.serve(async (req: Request) => {
   const eventType = event.event_type ?? "";
   const obj = event.event_object ?? {};
 
-  // at-least-once delivery: skip events already fully processed
   if (event.event_id) {
     const { data: seen } = await db
       .from("webhook_events")
@@ -348,7 +347,6 @@ Deno.serve(async (req: Request) => {
     processing_error: errorNote,
   });
 
-  // 5xx makes Bridge redeliver — processing should be retried, not dropped
   if (errorNote) return json({ error: "processing_failed", detail: errorNote }, 500);
   return json({ received: true });
 });

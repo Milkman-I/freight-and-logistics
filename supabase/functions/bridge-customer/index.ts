@@ -10,10 +10,11 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
  * endpoint is self-healing: a duplicate-create rejection carries the
  * existing link in its body and it gets adopted (stored + its hosted URL
  * returned) instead of erroring — a user who abandoned Persona mid-flow
- * always reopens their original link, never a dead end. Every success
- * response carries redirect_url. JWT auth. Secrets: BRIDGE_API_KEY ·
- * ALLOWED_ORIGINS (optional) · BRIDGE_API_URL (optional, overrides
- * https://api.bridge.xyz/v0).
+ * always reopens their original link, never a dead end. A stored-pointer
+ * GET that doesn't resolve falls through to creation and converges the
+ * same way. Every success response carries redirect_url. JWT auth.
+ * Secrets: BRIDGE_API_KEY · ALLOWED_ORIGINS (optional) · BRIDGE_API_URL
+ * (optional, overrides https://api.bridge.xyz/v0).
  */
 
 const API_URL =
@@ -133,7 +134,6 @@ Deno.serve(async (req: Request) => {
       );
   };
 
-  // resume: a stored link is the source of truth — refresh its live state
   if (profile?.bridge_kyc_link_id) {
     const res = await fetch(`${API_URL}/kyc_links/${profile.bridge_kyc_link_id}`, {
       headers: { "Api-Key": key, accept: "application/json" },
@@ -164,8 +164,6 @@ Deno.serve(async (req: Request) => {
         cors,
       );
     }
-    // stale or unreachable pointer — creation below adopts the existing
-    // link anyway (one link per email), so never dead-end here
   }
 
   const fullName =
@@ -191,7 +189,6 @@ Deno.serve(async (req: Request) => {
 
   if (!res.ok) {
     const err = (await res.json().catch(() => null)) as DuplicateError | null;
-    // duplicate_record = the user's link already exists — adopt it
     if (err?.code === "duplicate_record" && err.existing_kyc_link?.id) {
       return await persist(err.existing_kyc_link);
     }

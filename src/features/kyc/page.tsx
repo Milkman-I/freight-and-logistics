@@ -1,7 +1,9 @@
 /*
   features/kyc — /kyc, real Bridge identity verification.
-  States follow DS §5.5; actual KYC/data writes happen
-  service-side via the Bridge webhook.
+  Loads sync the kyc link's live state server-side; while Bridge reviews,
+  the page re-syncs every 15s; a Verify click that finds the outcome
+  already settled refreshes in place instead of reopening Persona.
+  Actual KYC/data writes happen service-side via the Bridge webhook.
 */
 
 import { useEffect, useState } from 'react'
@@ -40,11 +42,9 @@ export function KycPage() {
     try {
       let p = await fetchProfile(user.id)
       if (p.kyc_status !== 'approved') {
-        // pull the kyc link's live state server-side, then read the synced row
         await syncKyc().catch(() => null)
         p = await fetchProfile(user.id)
       } else {
-        // approved: make sure wallet + virtual accounts exist (idempotent)
         void provisionAccounts().catch(() => null)
       }
       setProfile(p)
@@ -63,7 +63,6 @@ export function KycPage() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    // while Bridge reviews, re-sync periodically so approval clears itself
     if (profile?.kyc_status !== 'under_review') return
     const t = setInterval(() => void load(), 15000)
     return () => clearInterval(t)
@@ -73,10 +72,6 @@ export function KycPage() {
     if (!profile) return
     setBusy(true)
     try {
-      // reopen the user's one and only kyc link (self-healing). A settled
-      // outcome refreshes in place — no Persona trip; anything still open
-      // goes straight to the hosted verification (falls back to the
-      // stored link's URL when the response omits one)
       const link = await onboardKyc(profile)
       if (link.kyc_status === 'approved' || link.kyc_status === 'rejected') {
         await load()
