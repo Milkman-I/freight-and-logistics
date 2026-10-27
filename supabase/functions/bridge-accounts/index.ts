@@ -6,14 +6,14 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
  * infrastructure (idempotent): a Base custody wallet (USDB), a USD virtual
  * account (ACH push/FedNow/Wire deposits → USDC to the chosen destination)
  * and a EUR virtual IBAN (SEPA deposits → EURC to the chosen destination).
- * The user picks the deposit destination before accounts are created: an
- * optional `deposit_destination` Base address in the request body (persisted
- * to user_profiles), defaulting to the F&L custody wallet. The choice is
- * frozen once virtual accounts exist — accounts are immutable in Bridge, so
- * a change request returns 409 destination_locked and requires replacing
- * the accounts. Deposit instructions are mirrored into money_accounts
- * directly from the API responses; a mirror row missing the data it
- * mirrors is dropped and re-provisioned (the stable idempotency keys
+ * The user must enter their own deposit destination (a Base address) —
+ * `deposit_destination` in the request body, persisted to user_profiles;
+ * idempotent replays may omit it when already stored. The choice is
+ * frozen once virtual accounts exist — accounts are immutable in Bridge,
+ * so a change request returns 409 destination_locked and requires
+ * replacing the accounts. Deposit instructions are mirrored into
+ * money_accounts directly from the API responses; a mirror row missing
+ * the data it mirrors is dropped and re-provisioned (the stable idempotency keys
  * replay Bridge's last good response). Also registers + activates the
  * Bridge webhook endpoint and persists its RSA public key in bridge_config.
  * JWT auth. Secrets: BRIDGE_API_KEY · ALLOWED_ORIGINS (optional) ·
@@ -181,9 +181,10 @@ Deno.serve(async (req: Request) => {
     db.schema("public").from("money_accounts").upsert(row, { onConflict: "bridge_account_id" });
   const idemFor = (purpose: string) => `fl-${user.id.slice(0, 8)}-${purpose}`;
 
-  // Deposit destination: validate the requested address BEFORE any Bridge
-  // call, refuse a change once virtual accounts exist (immutable in
-  // Bridge), then persist the choice (custody-wallet default = NULL).
+  // Deposit destination: REQUIRED — the user's own Base wallet. Validate
+  // the requested address BEFORE any Bridge call; a stored choice may be
+  // reused for idempotent replays; refuse a change once virtual accounts
+  // exist (immutable in Bridge); persist the choice.
   const body = await req.json().catch(() => null) as { deposit_destination?: unknown } | null;
   const requested = body?.deposit_destination;
   if (
@@ -195,13 +196,16 @@ Deno.serve(async (req: Request) => {
     return json({ error: "deposit_destination_invalid" }, 400, cors);
   }
   const stored = profile.deposit_destination ?? null;
+  const requestedNorm =
+    typeof requested === "string" ? requested.trim().toLowerCase() : null;
+  if (requestedNorm === null && stored === null) {
+    return json({ error: "deposit_destination_required" }, 400, cors);
+  }
   const hasVirtualAccounts = rows.some(
     (a) =>
       (a.currency === "USD" && a.kind === "us_checking") ||
       (a.currency === "EUR" && a.kind === "eur_iban"),
   );
-  const requestedNorm =
-    typeof requested === "string" ? requested.trim().toLowerCase() : null;
   if (
     requestedNorm !== null &&
     hasVirtualAccounts &&
@@ -243,9 +247,9 @@ Deno.serve(async (req: Request) => {
     .eq("kind", "wallet")
     .maybeSingle<{ wallet_address: string | null }>();
   const walletAddress = walletRow?.wallet_address ?? null;
-  // Where converted USDC/EURC sweeps: user's choice (requested or stored),
-  // falling back to the F&L custody wallet.
-  const destinationAddress = requestedNorm ?? stored ?? walletAddress;
+  // Where converted USDC/EURC sweeps: the user's own wallet (requested or
+  // stored) — the custody wallet is never an implicit fallback.
+  const destinationAddress = requestedNorm ?? stored;
 
   if (!rows.some((a) => a.currency === "USD" && a.kind === "us_checking") && destinationAddress) {
     const res = await post(

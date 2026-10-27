@@ -62,9 +62,9 @@ export function syncKyc(): Promise<{ kyc_status?: string; customer_id?: string; 
 }
 
 /** provision (idempotently) wallet + virtual accounts + webhook endpoint;
- * the optional deposit destination is where virtual-account deposits
- * sweep (omit = the user's F&L custody wallet) */
-export function provisionAccounts(depositDestination?: string): Promise<{
+ * `depositDestination` (the user's own wallet) is required unless a
+ * previous call already stored one server-side */
+export function provisionAccounts(depositDestination: string): Promise<{
   accounts: MoneyAccountRow[]
   wallet_address?: string
   deposit_destination?: string | null

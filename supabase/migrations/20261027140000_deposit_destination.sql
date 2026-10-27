@@ -1,8 +1,8 @@
 -- ============================================================
 -- Deposit destination choice + balances hardening.
--- 1) user_profiles.deposit_destination — an optional Base address
---    the user's virtual accounts sweep converted USDC/EURC into.
---    NULL = default (the F&L custody wallet).
+-- 1) user_profiles.deposit_destination — the Base address the user's
+--    virtual accounts sweep converted USDC/EURC into (required once
+--    accounts open; NULL = not set up yet).
 -- 2) balances view — first canonical definition in the repo; now
 --    security_invoker (RLS on transactions applies to the caller)
 --    and excluding deposits swept to a wallet outside F&L custody,
