@@ -1,18 +1,18 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-/** bridge-customer — onboard the signed-in user via a Bridge KYC link
- *  (current flow: the link creates the customer, approval delivers the id)
- *  and keep kyc_status + bridge_customer_id synced in user_profiles.
- *  JWT auth. Secret: BRIDGE_API_KEY ("sk-test" keys auto-target sandbox). */
+/**
+ * bridge-customer — onboards the signed-in user with a Bridge KYC link
+ * (POST /kyc_links, individual type; Bridge creates the customer and
+ * returns its id at link creation) and mirrors the live link state into
+ * user_profiles (GET /kyc_links/{id} drives kyc_status + customer_id).
+ * JWT auth. Secrets: BRIDGE_API_KEY · ALLOWED_ORIGINS (optional) ·
+ * BRIDGE_API_URL (optional, overrides https://api.bridge.xyz/v0).
+ */
 
-const API_BY_KEY = (key: string) =>
-  Deno.env.get("BRIDGE_API_URL")?.trim() ||
-  (key.startsWith("sk-test")
-    ? "https://api.sandbox.bridge.xyz/v0"
-    : "https://api.bridge.xyz/v0");
+const API_URL =
+  Deno.env.get("BRIDGE_API_URL")?.trim() || "https://api.bridge.xyz/v0";
 
-// CORS: our site origins only (env list, dev defaults) — never "*"
 const ALLOWED_ORIGINS = (
   Deno.env.get("ALLOWED_ORIGINS") ??
   "http://localhost:5173,http://localhost:4173"
@@ -31,33 +31,40 @@ const corsFor = (req: Request): Record<string, string> => {
   };
 };
 
-const json = (body: unknown, status = 200, cors: Record<string, string> = { vary: "Origin" }) =>
+const json = (
+  body: unknown,
+  status = 200,
+  cors: Record<string, string> = { vary: "Origin" },
+) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { "content-type": "application/json", ...cors },
   });
 
-/** Bridge kyc_link status → F&L app status */
-const mapKyc = (s: string) =>
-  s === "approved" ? "approved"
-  : ["rejected", "offboarded"].includes(s) ? "rejected"
-  : s === "not_started" ? "not_started"
-  : s === "incomplete" ? "incomplete"
-  : "under_review"; // under_review | awaiting_* | paused
+const mapKyc = (s: string): string =>
+  s === "approved" || s === "active"
+    ? "approved"
+    : ["rejected", "offboarded", "retired"].includes(s)
+    ? "rejected"
+    : s === "not_started"
+    ? "not_started"
+    : s === "incomplete"
+    ? "incomplete"
+    : "under_review";
+
+type LinkResponse = {
+  id: string;
+  kyc_status?: string;
+  customer_id?: string;
+};
 
 Deno.serve(async (req: Request) => {
   const cors = corsFor(req);
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405, cors);
 
-  const bridgeKey = Deno.env.get("BRIDGE_API_KEY")?.trim();
-  if (!bridgeKey) return json({ error: "bridge_not_configured" }, 500, cors);
-  const BRIDGE_API = API_BY_KEY(bridgeKey);
-  const auth = (extra: Record<string, string> = {}) => ({
-    "Api-Key": bridgeKey, // current Bridge auth scheme (no Basic prefix)
-    accept: "application/json",
-    ...extra,
-  });
+  const key = Deno.env.get("BRIDGE_API_KEY")?.trim();
+  if (!key) return json({ error: "bridge_not_configured" }, 500, cors);
 
   const db = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -90,42 +97,32 @@ Deno.serve(async (req: Request) => {
       full_name: string | null;
     }>();
 
-  // already onboarded
-  if (profile?.bridge_customer_id) {
-    return json(
-      { customer_id: profile.bridge_customer_id, existing: true },
-      200,
-      cors,
-    );
-  }
-
   const email = user.email ?? "";
 
-  // resume an existing kyc link — pull fresh state; customer_id may exist
-  // at creation time, while approval is tracked separately via kyc_status
   if (profile?.bridge_kyc_link_id) {
-    const res = await fetch(`${BRIDGE_API}/kyc_links/${profile.bridge_kyc_link_id}`, {
-      headers: auth(),
+    const res = await fetch(`${API_URL}/kyc_links/${profile.bridge_kyc_link_id}`, {
+      headers: { "Api-Key": key, accept: "application/json" },
     });
     if (res.ok) {
-      const link = (await res.json()) as {
-        kyc_status?: string;
-        customer_id?: string;
-      };
-      const updates: Record<string, string> = {
-        kyc_status: mapKyc(link.kyc_status ?? "not_started"),
-      };
-      if (link.customer_id && !profile.bridge_customer_id) {
-        updates.bridge_customer_id = link.customer_id;
+      const link = (await res.json()) as LinkResponse;
+      const kyc = mapKyc(link.kyc_status ?? "not_started");
+      const changed =
+        kyc !== profile.kyc_status ||
+        (Boolean(link.customer_id) && link.customer_id !== profile.bridge_customer_id);
+      if (changed) {
+        await db
+          .from("user_profiles")
+          .update({
+            kyc_status: kyc,
+            ...(link.customer_id ? { bridge_customer_id: link.customer_id } : {}),
+          })
+          .eq("id", user.id);
       }
-      await db.from("user_profiles").update(updates).eq("id", user.id);
       return json(
         {
           kyc_link_id: profile.bridge_kyc_link_id,
-          kyc_status: updates.kyc_status,
-          ...(updates.bridge_customer_id
-            ? { customer_id: updates.bridge_customer_id }
-            : {}),
+          kyc_status: kyc,
+          customer_id: link.customer_id ?? profile.bridge_customer_id,
         },
         200,
         cors,
@@ -133,16 +130,24 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  // create the kyc link (docs schema: full_name + email; customer comes on approval)
+  if (profile?.bridge_customer_id) {
+    return json({ customer_id: profile.bridge_customer_id, kyc_status: profile.kyc_status }, 200, cors);
+  }
+
   const fullName =
     String(payload.full_name ?? "").trim() ||
     [payload.first_name, payload.last_name].filter(Boolean).join(" ").trim() ||
     (profile?.full_name ?? "").trim() ||
     email.split("@")[0];
 
-  const res = await fetch(`${BRIDGE_API}/kyc_links`, {
+  const res = await fetch(`${API_URL}/kyc_links`, {
     method: "POST",
-    headers: auth({ "content-type": "application/json", "Idempotency-Key": crypto.randomUUID() }),
+    headers: {
+      "Api-Key": key,
+      "Idempotency-Key": crypto.randomUUID(),
+      "content-type": "application/json",
+      accept: "application/json",
+    },
     body: JSON.stringify({
       full_name: fullName,
       email,
@@ -152,14 +157,9 @@ Deno.serve(async (req: Request) => {
   });
   if (!res.ok) return json({ error: "bridge_error", detail: await res.text() }, 502, cors);
 
-  const link = (await res.json()) as {
-    id: string;
-    kyc_status?: string;
-    customer_id?: string;
-  };
+  const link = (await res.json()) as LinkResponse;
   const kyc = mapKyc(link.kyc_status ?? "not_started");
   await db
-    .schema("public")
     .from("user_profiles")
     .update({
       bridge_kyc_link_id: link.id,

@@ -9,7 +9,7 @@ Stablecoin banking platform: email sign-in → KYC → bank accounts → wallets
 - **Design system**: [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) ("Lime Voltage") — tokens live in `src/tokens.css`
 - **Supabase**: Auth (email + password) + Postgres + Edge Functions
   - Project: `nkpoijxwcowyrzcmvwjw` (eu-west-2)
-- **Bridge** (current api.bridge.xyz `/v0` API — `Api-Key` header auth, KYC-links onboarding, API-based webhook endpoints with RSA signature verification) — all calls happen server-side via Edge Functions; the browser never touches Bridge. Sandbox: keys starting `sk-test` auto-route to `api.sandbox.bridge.xyz`
+- **Bridge** (current api.bridge.xyz `/v0` API — `Api-Key` header auth, KYC-links onboarding, API-based webhook endpoints with RSA signature verification) — all calls happen server-side via Edge Functions; the browser never touches Bridge. Sandbox is selected via the `BRIDGE_API_URL` secret (`https://api.sandbox.bridge.xyz/v0`); default is production
 
 ## Run
 
@@ -99,5 +99,5 @@ Supabase Auth → Providers: none — email + password is enabled by default. If
 
 1. ✅ **Google auth** → replaced by **email + password** (no provider config needed; Google/Apple buttons removed)
 2. ✅ **DB schema + RLS** — canonical in `supabase/migrations/` (4 files, matching remote history; plan's old names `accounts`/`wallets` became `money_accounts`, `kyc_state` lives in `user_profiles.kyc_status`)
-3. ✅ **Edge Functions holding the Bridge key** — 5 functions deployed on the **current Bridge API** (`Api-Key` auth header + `Idempotency-Key` on writes; sandbox keys `sk-test…` auto-target `api.sandbox.bridge.xyz`; CORS echoes allowlisted origins only — `ALLOWED_ORIGINS` env, dev default `localhost:5173|4173`). Includes `bridge-accounts` provisioning + API-registered webhook endpoint with RSA signature verification
+3. ✅ **Edge Functions holding the Bridge key** — 5 functions deployed on the **current Bridge API** (`Api-Key` auth header + `Idempotency-Key` on writes; target host via `BRIDGE_API_URL`, default production; CORS echoes allowlisted origins only — `ALLOWED_ORIGINS` env, dev default `localhost:5173|4173`). Includes `bridge-accounts` provisioning + API-registered webhook endpoint with RSA signature verification
 4. ⏳ **Dashboard real data** — page, reads, history/invoice flows all built; the deposit → webhook → balance loop is wired and signature-verified live, but real traffic starts once a human completes Persona KYC and `bridge-accounts` provisioning runs (self-serve, no extra secrets)

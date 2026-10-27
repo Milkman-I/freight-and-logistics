@@ -1,21 +1,20 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-/** bridge-accounts — provision the KYC-approved user's Bridge payment
- *  infrastructure (idempotent): a Base custody wallet (USDB), a USD
- *  virtual account (ACH push/FedNow/Wire deposits → USDC to the wallet)
- *  and a EUR virtual IBAN (SEPA deposits → EURC to the wallet). Also
- *  ensures the Bridge webhook endpoint is registered + active and
- *  returns its RSA public key. JWT auth. Secret: BRIDGE_API_KEY
- *  ("sk-test" keys auto-target the sandbox host). */
+/**
+ * bridge-accounts — provisions the KYC-approved user's Bridge payment
+ * infrastructure (idempotent): a Base custody wallet (USDB), a USD virtual
+ * account (ACH push/FedNow/Wire deposits → USDC to the wallet) and a EUR
+ * virtual IBAN (SEPA deposits → EURC). Deposit instructions are mirrored
+ * into money_accounts directly from the API responses. Also registers +
+ * activates the Bridge webhook endpoint and persists its RSA public key in
+ * bridge_config. JWT auth. Secrets: BRIDGE_API_KEY · ALLOWED_ORIGINS
+ * (optional) · BRIDGE_API_URL (optional, overrides api.bridge.xyz/v0).
+ */
 
-const API_BY_KEY = (key: string) =>
-  Deno.env.get("BRIDGE_API_URL")?.trim() ||
-  (key.startsWith("sk-test")
-    ? "https://api.sandbox.bridge.xyz/v0"
-    : "https://api.bridge.xyz/v0");
+const API_URL =
+  Deno.env.get("BRIDGE_API_URL")?.trim() || "https://api.bridge.xyz/v0";
 
-// CORS: our site origins only (env list, dev defaults) — never "*"
 const ALLOWED_ORIGINS = (
   Deno.env.get("ALLOWED_ORIGINS") ??
   "http://localhost:5173,http://localhost:4173"
@@ -34,27 +33,35 @@ const corsFor = (req: Request): Record<string, string> => {
   };
 };
 
-const json = (body: unknown, status = 200, cors: Record<string, string> = { vary: "Origin" }) =>
+const json = (
+  body: unknown,
+  status = 200,
+  cors: Record<string, string> = { vary: "Origin" },
+) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { "content-type": "application/json", ...cors },
   });
 
-type Wallet = { id: string; address?: string; chain?: string };
+type Wallet = {
+  id: string;
+  address?: string;
+  chain?: string;
+};
 
-type VAccount = {
+type DepositInstructions = {
+  bank_name?: string;
+  bank_beneficiary_name?: string;
+  account_holder_name?: string;
+  bank_account_number?: string;
+  bank_routing_number?: string;
+  iban?: string;
+};
+
+type VirtualAccount = {
   id: string;
   status?: string;
-  source_deposit_instructions?: {
-    currency?: string;
-    payment_rails?: string[];
-    bank_name?: string;
-    bank_beneficiary_name?: string;
-    account_holder_name?: string;
-    bank_account_number?: string;
-    bank_routing_number?: string;
-    iban?: string;
-  };
+  source_deposit_instructions?: DepositInstructions;
   destination?: { address?: string; currency?: string; payment_rail?: string };
 };
 
@@ -65,19 +72,40 @@ type AccountRow = {
   bridge_account_id: string | null;
 };
 
+type WebhookEndpoint = {
+  id: string;
+  url: string;
+  status: string;
+  public_key?: string | null;
+};
+
+const WEBHOOK_CATEGORIES = [
+  "customer",
+  "kyc_link",
+  "transfer",
+  "virtual_account",
+  "virtual_account.activity",
+  "bridge_wallet.activity",
+];
+
 Deno.serve(async (req: Request) => {
   const cors = corsFor(req);
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405, cors);
 
-  const bridgeKey = Deno.env.get("BRIDGE_API_KEY")?.trim();
-  if (!bridgeKey) return json({ error: "bridge_not_configured" }, 500, cors);
-  const BRIDGE_API = API_BY_KEY(bridgeKey);
+  const key = Deno.env.get("BRIDGE_API_KEY")?.trim();
+  if (!key) return json({ error: "bridge_not_configured" }, 500, cors);
+
+  const get = (path: string) =>
+    fetch(`${API_URL}${path}`, {
+      headers: { "Api-Key": key, accept: "application/json" },
+    });
+
   const post = (path: string, body: unknown, idem: string) =>
-    fetch(`${BRIDGE_API}${path}`, {
+    fetch(`${API_URL}${path}`, {
       method: "POST",
       headers: {
-        "Api-Key": bridgeKey,
+        "Api-Key": key,
         "Idempotency-Key": idem,
         "content-type": "application/json",
         accept: "application/json",
@@ -100,9 +128,9 @@ Deno.serve(async (req: Request) => {
   const { data: profile } = await db
     .schema("public")
     .from("user_profiles")
-    .select("bridge_customer_id, kyc_status, full_name")
+    .select("bridge_customer_id, kyc_status")
     .eq("id", user.id)
-    .single<{ bridge_customer_id: string | null; kyc_status: string; full_name: string | null }>();
+    .single<{ bridge_customer_id: string | null; kyc_status: string }>();
   if (!profile?.bridge_customer_id) {
     return json({ error: "customer_not_registered" }, 428, cors);
   }
@@ -111,26 +139,22 @@ Deno.serve(async (req: Request) => {
   }
 
   const cid = profile.bridge_customer_id;
+  const notes: string[] = [];
+
   const { data: existing } = await db
     .schema("public")
     .from("money_accounts")
     .select("id, currency, kind, bridge_account_id")
     .eq("user_id", user.id);
-  const have = (currency: string, kind: string) =>
-    (existing ?? []).some((a: AccountRow) => a.currency === currency && a.kind === kind);
+  const rows = (existing ?? []) as AccountRow[];
   const upsertRow = (row: Record<string, unknown>) =>
     db.schema("public").from("money_accounts").upsert(row, { onConflict: "bridge_account_id" });
+  const idemFor = (purpose: string) => `fl-${user.id.slice(0, 8)}-${purpose}`;
 
-  const short = user.id.slice(0, 8); // deterministic idempotency per user+purpose
-  const notes: string[] = [];
-
-  // 1) Base custody wallet — deposits and payouts land here
-  let walletAddress: string | null = null;
-  const walletRow = (existing ?? []).find((a: AccountRow) => a.kind === "wallet");
-  if (!walletRow) {
-    const res = await post(`/customers/${cid}/wallets`, { chain: "base" }, `fl-${short}-base-wallet`);
+  if (!rows.some((a) => a.kind === "wallet")) {
+    const res = await post(`/customers/${cid}/wallets`, { chain: "base" }, idemFor("base-wallet"));
     if (!res.ok) {
-      notes.push(`wallet: ${await res.text()}`);
+      notes.push(`wallet: ${(await res.text()).slice(0, 220)}`);
     } else {
       const w = (await res.json()) as Wallet;
       await upsertRow({
@@ -139,101 +163,132 @@ Deno.serve(async (req: Request) => {
         kind: "wallet",
         currency: "USDB",
         wallet_address: w.address ?? null,
-        rails: ["base"],
+        rails: [w.chain ?? "base"],
         status: "active",
       });
-      walletAddress = w.address ?? null;
     }
-  } else {
-    walletAddress = null; // filled below from the row when present
   }
 
-  // resolve the wallet address for v-account destinations (fresh row may be ours)
-  let destAddress = walletAddress;
-  if (!destAddress) {
-    const { data: wRow } = await db
-      .schema("public")
-      .from("money_accounts")
-      .select("wallet_address")
-      .eq("user_id", user.id)
-      .eq("kind", "wallet")
-      .maybeSingle<{ wallet_address: string | null }>();
-    destAddress = wRow?.wallet_address ?? null;
-  }
+  const { data: walletRow } = await db
+    .schema("public")
+    .from("money_accounts")
+    .select("wallet_address")
+    .eq("user_id", user.id)
+    .eq("kind", "wallet")
+    .maybeSingle<{ wallet_address: string | null }>();
+  const walletAddress = walletRow?.wallet_address ?? null;
 
-  // 2) USD virtual account — ACH push / FedNow / Wire deposits
-  if (!have("USD", "us_checking") && destAddress) {
+  if (!rows.some((a) => a.currency === "USD" && a.kind === "us_checking") && walletAddress) {
     const res = await post(
       `/customers/${cid}/virtual_accounts`,
       {
         developer_fee_percent: "0",
         source: { currency: "usd" },
-        destination: { currency: "usdc", payment_rail: "base", address: destAddress },
+        destination: { currency: "usdc", payment_rail: "base", address: walletAddress },
       },
-      `fl-${short}-us-vaccount`,
+      idemFor("us-vaccount"),
     );
-    if (!res.ok) notes.push(`us_vaccount: ${(await res.text()).slice(0, 220)}`);
+    if (!res.ok) {
+      notes.push(`us_vaccount: ${(await res.text()).slice(0, 220)}`);
+    } else {
+      const va = (await res.json()) as VirtualAccount;
+      const sdi = va.source_deposit_instructions ?? {};
+      await upsertRow({
+        user_id: user.id,
+        bridge_account_id: va.id,
+        kind: "us_checking",
+        currency: "USD",
+        routing_number: sdi.bank_routing_number ?? null,
+        account_number: sdi.bank_account_number ?? null,
+        iban: sdi.iban ?? null,
+        bank_name: sdi.bank_name ?? null,
+        beneficiary_name: sdi.bank_beneficiary_name ?? sdi.account_holder_name ?? null,
+        wallet_address: va.destination?.address ?? null,
+        rails: sdi.payment_rails ?? ["ach_push", "fednow", "wire"],
+        status: va.status === "deactivated" ? "failed" : "active",
+      });
+    }
   }
 
-  // 3) EUR virtual IBAN — SEPA deposits
-  if (!have("EUR", "eur_iban") && destAddress) {
+  if (!rows.some((a) => a.currency === "EUR" && a.kind === "eur_iban") && walletAddress) {
     const res = await post(
       `/customers/${cid}/virtual_accounts`,
       {
         developer_fee_percent: "0",
         source: { currency: "eur" },
-        destination: { currency: "eurc", payment_rail: "base", address: destAddress },
+        destination: { currency: "eurc", payment_rail: "base", address: walletAddress },
       },
-      `fl-${short}-eur-viban`,
+      idemFor("eur-viban"),
     );
-    if (!res.ok) notes.push(`eur_viban: ${(await res.text()).slice(0, 220)}`);
+    if (!res.ok) {
+      notes.push(`eur_viban: ${(await res.text()).slice(0, 220)}`);
+    } else {
+      const va = (await res.json()) as VirtualAccount;
+      const sdi = va.source_deposit_instructions ?? {};
+      await upsertRow({
+        user_id: user.id,
+        bridge_account_id: va.id,
+        kind: "eur_iban",
+        currency: "EUR",
+        routing_number: sdi.bank_routing_number ?? null,
+        account_number: sdi.bank_account_number ?? null,
+        iban: sdi.iban ?? null,
+        bank_name: sdi.bank_name ?? null,
+        beneficiary_name: sdi.bank_beneficiary_name ?? sdi.account_holder_name ?? null,
+        wallet_address: va.destination?.address ?? null,
+        rails: sdi.payment_rails ?? ["sepa"],
+        status: va.status === "deactivated" ? "failed" : "active",
+      });
+    }
   }
 
-  // webhook endpoint: register our function URL, activate it, return its public key
   const hookUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/bridge-webhook`;
-  const categories = [
-    "customer",
-    "kyc_link",
-    "transfer",
-    "virtual_account",
-    "virtual_account.activity",
-    "bridge_wallet.activity",
-  ];
-  let webhook: { id: string; url: string; status: string; public_key?: string | null } | null = null;
-  const listRes = await fetch(`${BRIDGE_API}/webhooks`, {
-    headers: { "Api-Key": bridgeKey, accept: "application/json" },
-  });
-  const list = ((await listRes.json().catch(() => null)) ?? {}) as { data?: { id: string; url: string }[] };
-  const found = (list.data ?? []).find((w) => w.url === hookUrl);
-  const activate = async (id: string) => {
-    const res = await fetch(`${BRIDGE_API}/webhooks/${id}`, {
-      method: "PUT",
-      headers: { "Api-Key": bridgeKey, "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ url: hookUrl, status: "active", event_categories: categories }),
-    });
-    if (!res.ok) {
-      notes.push(`webhook_activate: ${(await res.text()).slice(0, 220)}`);
-      return null;
-    }
-    return (await res.json()) as { id: string; url: string; status: string; public_key?: string };
+  const listRes = await get("/webhooks");
+  const list = ((await listRes.json().catch(() => null)) ?? {}) as {
+    data?: { id: string; url: string }[];
   };
+  const found = (list.data ?? []).find((w) => w.url === hookUrl);
+
+  let webhook: WebhookEndpoint | null = null;
   if (found) {
-    webhook = await activate(found.id);
+    const res = await fetch(`${API_URL}/webhooks/${found.id}`, {
+      method: "PUT",
+      headers: { "Api-Key": key, "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({
+        url: hookUrl,
+        status: "active",
+        event_categories: WEBHOOK_CATEGORIES,
+      }),
+    });
+    if (res.ok) webhook = (await res.json()) as WebhookEndpoint;
   } else {
     const res = await post(
       "/webhooks",
-      { url: hookUrl, event_epoch: "webhook_creation", event_categories: categories },
-      `fl-${short}-webhook-endpoint`,
+      { url: hookUrl, event_epoch: "webhook_creation", event_categories: WEBHOOK_CATEGORIES },
+      idemFor("webhook-endpoint"),
     );
     if (!res.ok) {
-      notes.push(`webhook_create: ${(await res.text()).slice(0, 220)}`);
+      notes.push(`webhook: ${(await res.text()).slice(0, 220)}`);
     } else {
-      const created = (await res.json()) as { id: string; url: string };
-      webhook = await activate(created.id);
+      const created = (await res.json()) as { id: string };
+      const active = await fetch(`${API_URL}/webhooks/${created.id}`, {
+        method: "PUT",
+        headers: { "Api-Key": key, "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({
+          url: hookUrl,
+          status: "active",
+          event_categories: WEBHOOK_CATEGORIES,
+        }),
+      });
+      if (active.ok) webhook = (await active.json()) as WebhookEndpoint;
     }
   }
 
-  // persist the endpoint's public key — bridge-webhook verifies against it
+  if (webhook && !webhook.public_key) {
+    const read = await get(`/webhooks/${webhook.id}`);
+    if (read.ok) webhook = (await read.json()) as WebhookEndpoint;
+  }
+
   if (webhook?.public_key) {
     await db.from("bridge_config").upsert(
       {
@@ -253,9 +308,5 @@ Deno.serve(async (req: Request) => {
     .select("*")
     .eq("user_id", user.id);
 
-  return json(
-    { accounts: accounts ?? [], wallet_address: destAddress, webhook, notes },
-    200,
-    cors,
-  );
+  return json({ accounts: accounts ?? [], wallet_address: walletAddress, webhook, notes }, 200, cors);
 });
