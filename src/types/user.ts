@@ -18,6 +18,7 @@ export type UserProfile = {
   bridge_customer_id: string | null
   bridge_kyc_link_id: string | null
   kyc_status: KycStatus
+  deposit_destination: string | null
   created_at: string
   updated_at?: string
 }

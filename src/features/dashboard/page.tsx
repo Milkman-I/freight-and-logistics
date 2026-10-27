@@ -169,7 +169,13 @@ export function Dashboard({ session }: { session: Session }) {
               </div>
             </div>
 
-            {profile && <KycStrip kyc={profile.kyc_status} onOpenKyc={openKyc} />}
+            {profile && (
+              <KycStrip
+                kyc={profile.kyc_status}
+                accountsReady={accounts.length > 0}
+                onOpenKyc={openKyc}
+              />
+            )}
 
             <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
               <StatCard

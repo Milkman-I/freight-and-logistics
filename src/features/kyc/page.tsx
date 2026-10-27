@@ -3,6 +3,9 @@
   Loads sync the kyc link's live state server-side; while Bridge reviews,
   the page re-syncs every 15s; a Verify click that finds the outcome
   already settled refreshes in place instead of reopening Persona.
+  Once verified, accounts are NOT auto-provisioned: the setup card asks
+  the user where deposits should land (F&L custody wallet or their own
+  Base address) and only then calls provisioning with that destination.
   Actual KYC/data writes happen service-side via the Bridge webhook.
 */
 
@@ -10,9 +13,11 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../services/supabase'
 import { fetchProfile } from '../../services/profiles'
+import { getAccounts } from '../../services/money'
 import { onboardKyc, startKycUrl, syncKyc, provisionAccounts } from '../../services/bridge'
 import { notify } from '../../components/Toast'
 import type { UserProfile } from '../../types/user'
+import type { MoneyAccountRow } from '../../types/money'
 import { AppRail } from '../../components/AppRail'
 import { Logo } from '../../components/Logo'
 import { KycSteps, Pill } from './components/KycSteps'
@@ -28,6 +33,10 @@ const PILL: Record<UserProfile['kyc_status'], { cls: string; label: string }> = 
 export function KycPage() {
   const navigate = useNavigate()
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [accounts, setAccounts] = useState<MoneyAccountRow[]>([])
+  const [destChoice, setDestChoice] = useState<'custody' | 'own'>('custody')
+  const [customAddress, setCustomAddress] = useState('')
+  const [setupBusy, setSetupBusy] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
   const [busy, setBusy] = useState(false)
 
@@ -45,7 +54,10 @@ export function KycPage() {
         await syncKyc().catch(() => null)
         p = await fetchProfile(user.id)
       } else {
-        void provisionAccounts().catch(() => null)
+        // Accounts are NOT auto-provisioned: the user chooses the deposit
+        // destination first (the setup card below). Read-only here.
+        setAccounts(await getAccounts(false))
+        if (p.deposit_destination) setCustomAddress(p.deposit_destination)
       }
       setProfile(p)
       setLoadFailed(false)
@@ -105,6 +117,35 @@ export function KycPage() {
 
   const kyc = profile?.kyc_status ?? 'not_started'
   const done = kyc === 'approved'
+  const needsSetup = done && accounts.length === 0
+
+  async function onSetup() {
+    setSetupBusy(true)
+    const dest = destChoice === 'own' ? customAddress.trim() : undefined
+    if (dest && !/^0x[a-fA-F0-9]{40}$/.test(dest)) {
+      notify('That wallet address doesn’t look right — Base addresses start with 0x and have 40 hex characters.', 'error')
+      setSetupBusy(false)
+      return
+    }
+    try {
+      await provisionAccounts(dest)
+      await load()
+      notify('Your accounts are ready — bank details are on the dashboard.', 'success')
+    } catch (e) {
+      const slug = e instanceof Error ? e.message : 'request_failed'
+      if (slug === 'deposit_destination_invalid') {
+        notify('That wallet address doesn’t look right — Base addresses start with 0x and have 40 hex characters.', 'error')
+      } else if (slug === 'destination_locked') {
+        notify('Your accounts already exist with a different destination — contact support to replace them.', 'error')
+      } else if (slug === 'kyc_not_approved') {
+        notify('Your verification status just changed — reload and try again.', 'error')
+      } else {
+        notify('Could not set up your accounts. Please try again.', 'error')
+      }
+    } finally {
+      setSetupBusy(false)
+    }
+  }
 
   return (
     <main className="page-enter min-h-screen bg-paper">
@@ -133,7 +174,9 @@ export function KycPage() {
               You're verified ✓
             </h1>
             <p className="mt-3 text-base leading-relaxed text-muted">
-              Your account is active and all money features are unlocked.
+              {needsSetup
+                ? 'One last step: choose where your incoming deposits should land.'
+                : 'Your account is active and all money features are unlocked.'}
             </p>
           </>
         ) : (
@@ -184,7 +227,7 @@ export function KycPage() {
                     : 'Verify identity →'}
             </button>
           )}
-          {(done || kyc === 'rejected') && (
+          {((done && !needsSetup) || kyc === 'rejected') && (
             <button
               onClick={() => navigate('/app')}
               className="h-12 rounded-xl bg-lime px-7 text-base font-bold text-on-lime transition-transform hover:-translate-y-0.5"
@@ -198,6 +241,78 @@ export function KycPage() {
             </p>
           )}
         </div>
+
+        {done && needsSetup && (
+          <div className="mt-7 rounded-2xl border border-line bg-fog p-5 md:p-6">
+            <p className="text-base font-extrabold text-ink">
+              Where should your deposits land?
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-muted">
+              Money sent to your new bank details (ACH, FedNow, Wire, SEPA) is converted
+              into stablecoins and swept to the Base wallet you pick. This choice is
+              permanent once your accounts exist.
+            </p>
+
+            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-white p-4 transition-shadow hover:shadow-sm">
+              <input
+                type="radio"
+                name="deposit-destination"
+                checked={destChoice === 'custody'}
+                onChange={() => setDestChoice('custody')}
+                className="mt-1 accent-[#5B8A1E]"
+              />
+              <span>
+                <span className="block text-sm font-bold text-ink">
+                  F&L custody wallet <span className="ml-1 rounded-full bg-[#D6F5C0] px-2 py-0.5 text-[10px] font-bold text-[#2E5B12]">Recommended</span>
+                </span>
+                <span className="mt-0.5 block text-sm leading-relaxed text-muted">
+                  Deposits sweep to your built-in wallet. You see balances in-app and can
+                  send money out to any wallet from the Send page.
+                </span>
+              </span>
+            </label>
+
+            <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-white p-4 transition-shadow hover:shadow-sm">
+              <input
+                type="radio"
+                name="deposit-destination"
+                checked={destChoice === 'own'}
+                onChange={() => setDestChoice('own')}
+                className="mt-1 accent-[#5B8A1E]"
+              />
+              <span className="flex-1">
+                <span className="block text-sm font-bold text-ink">My own wallet</span>
+                <span className="mt-0.5 block text-sm leading-relaxed text-muted">
+                  Deposits sweep straight to your Base wallet — self-custody from day
+                  one. That money will not appear as in-app balance; send it out from
+                  your own wallet.
+                </span>
+                {destChoice === 'own' && (
+                  <input
+                    value={customAddress}
+                    onChange={(e) => setCustomAddress(e.target.value)}
+                    placeholder="0x…"
+                    spellCheck={false}
+                    className="mt-3 h-11 w-full rounded-xl border-[1.5px] border-[#C4CCB4] bg-white px-4 text-sm text-ink placeholder:text-muted/60 focus:border-moss focus:outline-none"
+                  />
+                )}
+              </span>
+            </label>
+
+            <div className="mt-5 flex flex-wrap items-center gap-4">
+              <button
+                onClick={() => void onSetup()}
+                disabled={setupBusy || (destChoice === 'own' && customAddress.trim() === '')}
+                className="h-12 rounded-xl bg-lime px-7 text-base font-bold text-on-lime transition-transform hover:-translate-y-0.5 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {setupBusy ? 'Setting up…' : 'Open my accounts →'}
+              </button>
+              <p className="text-sm text-muted">
+                You&apos;ll get a US routing number and a European IBAN in your name.
+              </p>
+            </div>
+          </div>
+        )}
 
         {!done && <KycSteps />}
       </article>

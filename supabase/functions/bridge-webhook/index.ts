@@ -13,7 +13,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
  * kyc_status, kyc_link → kyc + customer id, virtual_account →
  * money_accounts, bridge_wallet → wallet row, transfer → transactions
  * (settled incoming payments auto-match the oldest open invoice of the
- * same amount + currency). Processing is at-least-once: already
+ * same amount + currency; deposits whose destination address is not the
+ * user's custody wallet are categorized external_sweep so the balances
+ * view excludes that money — it swept to the user's chosen wallet outside
+ * the app). Processing is at-least-once: already
  * processed event ids answer 200 without re-running, failures answer
  * 5xx so Bridge redelivers. Every verified event is audited in
  * webhook_events. Secrets: SUPABASE service role (built-ins).
@@ -289,6 +292,24 @@ Deno.serve(async (req: Request) => {
             .update({ status })
             .eq("id", existing.id);
         } else if (userId) {
+          // Deposits sweeping to a wallet outside F&L custody are marked
+          // external_sweep so the balances view excludes them (that money
+          // is not spendable in-app); custody-bound deposits get ''.
+          let txCategory = "";
+          if (isDeposit) {
+            const { data: walletRow } = await db
+              .schema("public")
+              .from("money_accounts")
+              .select("wallet_address")
+              .eq("user_id", userId)
+              .eq("kind", "wallet")
+              .maybeSingle<{ wallet_address: string | null }>();
+            const custodyAddr = (walletRow?.wallet_address ?? "").toLowerCase();
+            const destAddr = (t.destination?.to_address ?? "").toLowerCase();
+            if (!custodyAddr || (destAddr && destAddr !== custodyAddr)) {
+              txCategory = "external_sweep";
+            }
+          }
           const inserted = await db
             .schema("public")
             .from("transactions")
@@ -303,6 +324,7 @@ Deno.serve(async (req: Request) => {
                 status,
                 description: rail,
                 counterparty: t.destination?.to_address ?? "",
+                category: txCategory,
               },
               { onConflict: "bridge_transfer_id" },
             )

@@ -61,10 +61,17 @@ export function syncKyc(): Promise<{ kyc_status?: string; customer_id?: string; 
   return callFn('bridge-customer', {})
 }
 
-export function provisionAccounts(): Promise<{
+/** provision (idempotently) wallet + virtual accounts + webhook endpoint;
+ * the optional deposit destination is where virtual-account deposits
+ * sweep (omit = the user's F&L custody wallet) */
+export function provisionAccounts(depositDestination?: string): Promise<{
   accounts: MoneyAccountRow[]
   wallet_address?: string
+  deposit_destination?: string | null
+  notes?: string[]
   webhook?: { id: string; url: string; status: string; public_key?: string | null }
 }> {
-  return callFn('bridge-accounts', {})
+  return callFn('bridge-accounts', {
+    ...(depositDestination ? { deposit_destination: depositDestination } : {}),
+  })
 }

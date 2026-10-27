@@ -4,14 +4,20 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 /**
  * bridge-accounts — provisions the KYC-approved user's Bridge payment
  * infrastructure (idempotent): a Base custody wallet (USDB), a USD virtual
- * account (ACH push/FedNow/Wire deposits → USDC to the wallet) and a EUR
- * virtual IBAN (SEPA deposits → EURC). Deposit instructions are mirrored
- * into money_accounts directly from the API responses; a mirror row
- * missing the data it mirrors is dropped and re-provisioned (the stable
- * idempotency keys replay Bridge's last good response). Also registers +
- * activates the Bridge webhook endpoint and persists its RSA public key in
- * bridge_config. JWT auth. Secrets: BRIDGE_API_KEY · ALLOWED_ORIGINS
- * (optional) · BRIDGE_API_URL (optional, overrides api.bridge.xyz/v0).
+ * account (ACH push/FedNow/Wire deposits → USDC to the chosen destination)
+ * and a EUR virtual IBAN (SEPA deposits → EURC to the chosen destination).
+ * The user picks the deposit destination before accounts are created: an
+ * optional `deposit_destination` Base address in the request body (persisted
+ * to user_profiles), defaulting to the F&L custody wallet. The choice is
+ * frozen once virtual accounts exist — accounts are immutable in Bridge, so
+ * a change request returns 409 destination_locked and requires replacing
+ * the accounts. Deposit instructions are mirrored into money_accounts
+ * directly from the API responses; a mirror row missing the data it
+ * mirrors is dropped and re-provisioned (the stable idempotency keys
+ * replay Bridge's last good response). Also registers + activates the
+ * Bridge webhook endpoint and persists its RSA public key in bridge_config.
+ * JWT auth. Secrets: BRIDGE_API_KEY · ALLOWED_ORIGINS (optional) ·
+ * BRIDGE_API_URL (optional, overrides api.bridge.xyz/v0).
  */
 
 const API_URL =
@@ -133,9 +139,13 @@ Deno.serve(async (req: Request) => {
   const { data: profile } = await db
     .schema("public")
     .from("user_profiles")
-    .select("bridge_customer_id, kyc_status")
+    .select("bridge_customer_id, kyc_status, deposit_destination")
     .eq("id", user.id)
-    .single<{ bridge_customer_id: string | null; kyc_status: string }>();
+    .single<{
+      bridge_customer_id: string | null;
+      kyc_status: string;
+      deposit_destination: string | null;
+    }>();
   if (!profile?.bridge_customer_id) {
     return json({ error: "customer_not_registered" }, 428, cors);
   }
@@ -171,6 +181,42 @@ Deno.serve(async (req: Request) => {
     db.schema("public").from("money_accounts").upsert(row, { onConflict: "bridge_account_id" });
   const idemFor = (purpose: string) => `fl-${user.id.slice(0, 8)}-${purpose}`;
 
+  // Deposit destination: validate the requested address BEFORE any Bridge
+  // call, refuse a change once virtual accounts exist (immutable in
+  // Bridge), then persist the choice (custody-wallet default = NULL).
+  const body = await req.json().catch(() => null) as { deposit_destination?: unknown } | null;
+  const requested = body?.deposit_destination;
+  if (
+    requested !== undefined &&
+    requested !== null &&
+    (typeof requested !== "string" ||
+      !/^0x[a-fA-F0-9]{40}$/.test(requested.trim()))
+  ) {
+    return json({ error: "deposit_destination_invalid" }, 400, cors);
+  }
+  const stored = profile.deposit_destination ?? null;
+  const hasVirtualAccounts = rows.some(
+    (a) =>
+      (a.currency === "USD" && a.kind === "us_checking") ||
+      (a.currency === "EUR" && a.kind === "eur_iban"),
+  );
+  const requestedNorm =
+    typeof requested === "string" ? requested.trim().toLowerCase() : null;
+  if (
+    requestedNorm !== null &&
+    hasVirtualAccounts &&
+    requestedNorm !== (stored ?? "").toLowerCase()
+  ) {
+    return json({ error: "destination_locked" }, 409, cors);
+  }
+  if (requestedNorm !== null && requestedNorm !== (stored ?? "").toLowerCase()) {
+    await db
+      .schema("public")
+      .from("user_profiles")
+      .update({ deposit_destination: requestedNorm })
+      .eq("id", user.id);
+  }
+
   if (!rows.some((a) => a.kind === "wallet")) {
     const res = await post(`/customers/${cid}/wallets`, { chain: "base" }, idemFor("base-wallet"));
     if (!res.ok) {
@@ -197,14 +243,17 @@ Deno.serve(async (req: Request) => {
     .eq("kind", "wallet")
     .maybeSingle<{ wallet_address: string | null }>();
   const walletAddress = walletRow?.wallet_address ?? null;
+  // Where converted USDC/EURC sweeps: user's choice (requested or stored),
+  // falling back to the F&L custody wallet.
+  const destinationAddress = requestedNorm ?? stored ?? walletAddress;
 
-  if (!rows.some((a) => a.currency === "USD" && a.kind === "us_checking") && walletAddress) {
+  if (!rows.some((a) => a.currency === "USD" && a.kind === "us_checking") && destinationAddress) {
     const res = await post(
       `/customers/${cid}/virtual_accounts`,
       {
         developer_fee_percent: "0",
         source: { currency: "usd" },
-        destination: { currency: "usdc", payment_rail: "base", address: walletAddress },
+        destination: { currency: "usdc", payment_rail: "base", address: destinationAddress },
       },
       idemFor("us-vaccount"),
     );
@@ -230,13 +279,13 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  if (!rows.some((a) => a.currency === "EUR" && a.kind === "eur_iban") && walletAddress) {
+  if (!rows.some((a) => a.currency === "EUR" && a.kind === "eur_iban") && destinationAddress) {
     const res = await post(
       `/customers/${cid}/virtual_accounts`,
       {
         developer_fee_percent: "0",
         source: { currency: "eur" },
-        destination: { currency: "eurc", payment_rail: "base", address: walletAddress },
+        destination: { currency: "eurc", payment_rail: "base", address: destinationAddress },
       },
       idemFor("eur-viban"),
     );
@@ -328,5 +377,15 @@ Deno.serve(async (req: Request) => {
     .select("*")
     .eq("user_id", user.id);
 
-  return json({ accounts: accounts ?? [], wallet_address: walletAddress, webhook, notes }, 200, cors);
+  return json(
+    {
+      accounts: accounts ?? [],
+      wallet_address: walletAddress,
+      deposit_destination: destinationAddress,
+      webhook,
+      notes,
+    },
+    200,
+    cors,
+  );
 });
