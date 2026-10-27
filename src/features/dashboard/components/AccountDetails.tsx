@@ -71,12 +71,23 @@ export function AccountDetails({
                 </div>
                 <div className="mt-3 flex gap-4">
                   {acc.routing_number && <Field label="Routing" value={mask(acc.routing_number)} />}
-                  {acc.account_number && <Field label={acc.kind === 'wallet' ? 'Address' : 'Account'} value={mask(acc.account_number)} />}
+                  {acc.account_number && acc.kind !== 'wallet' && (
+                    <Field label="Account" value={mask(acc.account_number)} />
+                  )}
+                  {acc.kind === 'wallet' && acc.wallet_address && (
+                    <Field label="Address" value={mask(acc.wallet_address)} />
+                  )}
                 </div>
                 {acc.iban && (
                   <div className="mt-2">
                     <Field label="IBAN" value={mask(acc.iban)} />
                   </div>
+                )}
+                {(acc.beneficiary_name || acc.bank_name) && (
+                  <p className="mt-2 truncate text-[11px] text-muted">
+                    {acc.bank_name ?? ''}
+                    {acc.beneficiary_name ? `${acc.bank_name ? ' · ' : ''}${acc.beneficiary_name}` : ''}
+                  </p>
                 )}
                 {acc.rails.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1.5">
