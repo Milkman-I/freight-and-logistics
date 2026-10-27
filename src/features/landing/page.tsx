@@ -6,7 +6,7 @@
 */
 
 import type { Session } from '@supabase/supabase-js'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { LANDING_FEATURES, NAV_LINKS } from '../../constants/site'
 import { SHAPES } from './components/IsoShapes'
 import { Footer } from '../../components/Footer'
@@ -20,7 +20,7 @@ export function Landing({ session }: { session: Session | null }) {
 
   return (
     <main className="page-enter min-h-screen bg-[#FDFDFC]">
-      <section className="relative overflow-hidden">
+      <section id="top" className="relative overflow-hidden">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0"
@@ -39,15 +39,25 @@ export function Landing({ session }: { session: Session | null }) {
             <Logo variant="light" />
           </div>
           <nav className="hidden items-center gap-8 justify-self-center md:flex">
-            {NAV_LINKS.map((link) => (
-              <a
-                key={link}
-                href="#features"
-                className="text-sm font-semibold text-[#E9F5DF]/85 transition-colors hover:text-[#E9F5DF]"
-              >
-                {link}
-              </a>
-            ))}
+            {NAV_LINKS.map((link) =>
+              link.to.startsWith('#') ? (
+                <a
+                  key={link.label}
+                  href={link.to}
+                  className="text-sm font-semibold text-[#E9F5DF]/85 transition-colors hover:text-[#E9F5DF]"
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={link.label}
+                  to={link.to}
+                  className="text-sm font-semibold text-[#E9F5DF]/85 transition-colors hover:text-[#E9F5DF]"
+                >
+                  {link.label}
+                </Link>
+              ),
+            )}
           </nav>
           <div className="flex items-center gap-2.5 justify-self-end">
             <button

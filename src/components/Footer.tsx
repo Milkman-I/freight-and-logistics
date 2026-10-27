@@ -62,7 +62,7 @@ function InfoCol({ label, lines }: { label: string; lines: readonly string[] }) 
   )
 }
 
-function LinkCol({ label, items }: { label: string; items: readonly string[] }) {
+function LinkCol({ label, items }: { label: string; items: readonly { label: string; to: string }[] }) {
   return (
     <div>
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#A9BCA0]/70">
@@ -70,10 +70,16 @@ function LinkCol({ label, items }: { label: string; items: readonly string[] }) 
       </p>
       <ul className="mt-4 space-y-2.5">
         {items.map((item) => (
-          <li key={item}>
-            <a href="#" className="transition-colors hover:text-[#9FE870]">
-              {item}
-            </a>
+          <li key={item.label}>
+            {item.to.startsWith('#') ? (
+              <a href={item.to} className="transition-colors hover:text-[#9FE870]">
+                {item.label}
+              </a>
+            ) : (
+              <Link to={item.to} className="transition-colors hover:text-[#9FE870]">
+                {item.label}
+              </Link>
+            )}
           </li>
         ))}
       </ul>

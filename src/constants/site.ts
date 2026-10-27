@@ -3,7 +3,12 @@
    All marketing copy lives here so pages stay lean.
    ============================================================ */
 
-export const NAV_LINKS = ['Product', 'Custody', 'Transfers', 'FAQ']
+export const NAV_LINKS = [
+  { label: 'Home', to: '#top' },
+  { label: 'Features', to: '#features' },
+  { label: 'Send money', to: '/send' },
+  { label: 'Invoices', to: '/invoices' },
+]
 
 export const HERO_STATS = [
   { value: '2 min', label: 'to open an account' },
@@ -48,8 +53,16 @@ export const FOOTER_CONTENT = {
     { label: 'Contact us', lines: ['mohamed@freightandlogistics.online'] },
     { label: 'Support hours', lines: ['24 / 7 · every day'] },
   ],
-  navigation: ['Home', 'Personal', 'Business', 'About'],
-  resources: ['Blog', 'FAQ', 'Help Center'],
+  navigation: [
+    { label: 'Home', to: '#top' },
+    { label: 'Features', to: '#features' },
+    { label: 'Send money', to: '/send' },
+    { label: 'Invoices', to: '/invoices' },
+  ],
+  resources: [
+    { label: 'Terms of Service', to: '/terms' },
+    { label: 'Privacy Policy', to: '/privacy' },
+  ],
   firstTransfer: {
     label: 'Your first transfer',
     body: 'Your first transfer is on us — 0% fees when you send money for the first time.',
