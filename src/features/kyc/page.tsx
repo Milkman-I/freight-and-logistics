@@ -4,7 +4,9 @@
   the page re-syncs every 15s; a Verify click that finds the outcome
   already settled refreshes in place instead of reopening Persona.
   Bridge's own terms of service must be accepted before approval — the
-  page surfaces that as step 1 (opens tos_link) and Persona as step 2.
+  page surfaces that as step 1 (opens tos_link) and HARD-GATES Persona:
+  the verify button stays locked and a pending-TOS response never opens
+  the Persona URL until the provider reports the terms as accepted.
   Once verified, accounts are NOT auto-provisioned: the setup card asks
   the user for their Base wallet — the only place deposits may sweep —
   and only then calls provisioning with that destination.
@@ -87,9 +89,23 @@ export function KycPage() {
 
   async function onVerify() {
     if (!profile) return
+    // Gate: the provider's terms must be accepted (Step 1) before the
+    // Persona check opens — approval cannot complete without it.
+    if (tos.link && tos.status !== 'approved') {
+      notify('First accept the terms of our payments provider (Step 1 above) — then this unlocks.', 'error')
+      return
+    }
     setBusy(true)
     try {
       const link = await onboardKyc(profile)
+      // The provider may still be awaiting ToS acceptance at this moment —
+      // surface Step 1 instead of opening Persona.
+      if (link.tos_link && (link.tos_status ?? 'pending') !== 'approved' && tos.status !== 'approved') {
+        setTos({ link: link.tos_link, status: link.tos_status ?? 'pending' })
+        notify('One step before verification: accept the terms in Step 1 — they open in a new tab.', 'error')
+        setBusy(false)
+        return
+      }
       if (link.kyc_status === 'approved' || link.kyc_status === 'rejected') {
         await load()
         notify(
@@ -123,6 +139,9 @@ export function KycPage() {
   const kyc = profile?.kyc_status ?? 'not_started'
   const done = kyc === 'approved'
   const needsSetup = done && accounts.length === 0
+  // Step 1 gate — while the provider's terms are pending, verification
+  // (and the Persona link behind it) stays locked.
+  const tosPending = !done && tos.link !== null && tos.status !== 'approved'
 
   async function onSetup() {
     if (!customAddress.trim()) {
@@ -237,19 +256,26 @@ export function KycPage() {
 
         <div className="mt-7 flex flex-wrap items-center gap-4">
           {!done && kyc !== 'rejected' && (
-            <button
-              onClick={() => void onVerify()}
-              disabled={busy || !profile}
-              className="h-12 rounded-xl bg-lime px-7 text-base font-bold text-on-lime transition-transform hover:-translate-y-0.5 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {busy
-                ? 'Opening verification…'
-                : kyc === 'under_review'
-                  ? 'Resume verification'
-                  : kyc === 'incomplete'
-                    ? 'Complete verification'
-                    : 'Verify identity →'}
-            </button>
+            <>
+              <button
+                onClick={() => void onVerify()}
+                disabled={busy || !profile || tosPending}
+                className="h-12 rounded-xl bg-lime px-7 text-base font-bold text-on-lime transition-transform hover:-translate-y-0.5 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {busy
+                  ? 'Opening verification…'
+                  : kyc === 'under_review'
+                    ? 'Resume verification'
+                    : kyc === 'incomplete'
+                      ? 'Complete verification'
+                      : 'Verify identity →'}
+              </button>
+              {tosPending && (
+                <p className="text-sm text-muted">
+                  Locked until Step 1 is done — accept the terms, then this unlocks.
+                </p>
+              )}
+            </>
           )}
           {((done && !needsSetup) || kyc === 'rejected') && (
             <button
