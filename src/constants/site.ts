@@ -11,7 +11,7 @@ export const NAV_LINKS = [
 export const HERO_STATS = [
   { value: '2 min', label: 'to open an account' },
   { value: '<60s', label: 'identity check' },
-  { value: '80+', label: 'countries to send money' },
+  { value: 'US + EU', label: 'bank rails, one account' },
 ]
 
 export const LANDING_FEATURES = [
@@ -27,13 +27,13 @@ export const LANDING_FEATURES = [
   },
   {
     id: '03',
-    title: 'Custody that earns while it waits',
-    body: 'Your balance sits 1:1 in asset-backed stablecoins on Base, compounding daily with instant liquidity and zero lockups.',
+    title: 'Straight to your wallet',
+    body: 'Deposits auto-convert into asset-backed stablecoins on Base and land in your own wallet — self-custody from the first payment.',
   },
   {
     id: '04',
-    title: 'Payouts that loop the globe',
-    body: 'Send money to 80+ countries in seconds at mid-market rates. No SWIFT queues, no hidden markups — just your money, moving.',
+    title: 'Live the second money lands',
+    body: 'Every incoming payment is mirrored to your dashboard as it settles. No statements, no waiting — your ledger, real time.',
   },
 ] as const
 
@@ -59,9 +59,9 @@ export const FOOTER_CONTENT = {
     { label: 'Terms of Service', to: '/terms' },
     { label: 'Privacy Policy', to: '/privacy' },
   ],
-  firstTransfer: {
-    label: 'Your first transfer',
-    body: 'Your first transfer is on us — 0% fees when you send money for the first time.',
+  firstDeposit: {
+    label: 'Your first deposit',
+    body: 'Get real bank details in your name in minutes — receive US or EU payments straight to your wallet.',
   },
   subscribe: { label: 'Subscribe for updates', placeholder: 'Enter your email' },
   legal: { copyright: '© Copyright 2026 Freight And Logistics LLC. All rights reserved' },

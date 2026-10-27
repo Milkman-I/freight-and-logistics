@@ -12,7 +12,7 @@ export type KycStatus =
 
 export type UserProfile = {
   id: string
-  google_email: string
+  email: string
   full_name: string
   avatar_url: string | null
   bridge_customer_id: string | null

@@ -18,7 +18,7 @@ import emeraldMoonrise from '../../assets/emerald-moonrise.png'
 const PANEL_COPY = [
   'Your money, moving.',
   'One check. Global access.',
-  'Collect. Spend. Send.',
+  'Straight to your wallet.',
 ] as const
 
 export function AuthPage({ mode }: { mode: 'signin' | 'signup' }) {

@@ -196,8 +196,8 @@ export function KycPage() {
               </span>
             </h1>
             <p className="mt-3 text-base leading-relaxed text-muted">
-              One check unlocks real bank details, custody, and global payouts —
-              no paperwork, no branch visits.
+              One check unlocks real bank details in your name and
+              global payment rails — no paperwork, no branch visits.
             </p>
           </>
         )}

@@ -40,7 +40,6 @@ export type TransactionStatus =
 export type TransactionRow = {
   id: string
   user_id: string
-  account_id: string | null
   direction: 'in' | 'out'
   amount_minor: number
   currency: Currency

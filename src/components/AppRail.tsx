@@ -1,6 +1,6 @@
 /*
   AppRail — the fixed left icon nav shared by every signed-in page
-  (dashboard, /send, /kyc). Light buttons = dark theme, and vice versa.
+  (dashboard, /kyc). Light buttons = dark theme, and vice versa.
   Only functional destinations; profile-aware KYC badge.
 */
 

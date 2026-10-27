@@ -1,7 +1,6 @@
 /* ============================================================
    F&L utils — accounts (src/utils/accounts.ts)
-   Account naming + rail display labels (shared by dashboard
-   and send surfaces).
+   Account naming + rail display labels.
    ============================================================ */
 
 import type { MoneyAccountRow, Rail } from '../types/money'
@@ -9,7 +8,7 @@ import type { MoneyAccountRow, Rail } from '../types/money'
 export function accountName(a: MoneyAccountRow): string {
   if (a.kind === 'us_checking') return 'US Checking'
   if (a.kind === 'eur_iban') return 'European IBAN'
-  return 'Custodial Wallet'
+  return 'Account'
 }
 
 export const RAIL_LABEL: Record<Rail, string> = {

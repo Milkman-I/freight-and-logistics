@@ -97,11 +97,11 @@ export function Landing({ session }: { session: Session | null }) {
           <h1 className="mx-auto max-w-3xl text-5xl font-extrabold leading-[1.06] tracking-tight text-[#F4FAEB] md:text-[68px]">
             Real accounts, real railroads.
             <br />
-            Money moving by tomorrow.
+            Straight to your wallet.
           </h1>
           <p className="mx-auto mt-6 max-w-md text-base leading-relaxed text-[#C9E3AE] md:text-lg">
-            One sign-in, one identity check — then collect and send money
-            worldwide with bank-grade accounts built for you.
+            One sign-in, one identity check — then collect US and EU
+            payments through bank-grade accounts built for you.
           </p>
 
           <div className="mt-9 flex justify-center">
@@ -117,7 +117,7 @@ export function Landing({ session }: { session: Session | null }) {
             {[
               ['2 min', 'to open an account'],
               ['<60s', 'identity check'],
-              ['80+', 'countries to send money'],
+              ['US + EU', 'bank rails, one account'],
             ].map(([v, l]) => (
               <span key={l}>
                 <b className="font-extrabold text-[#163300]">{v}</b>{' '}

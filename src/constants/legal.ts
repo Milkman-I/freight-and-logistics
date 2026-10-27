@@ -33,17 +33,17 @@ export const TERMS: LegalDoc = {
       ],
     },
     {
-      title: '4. Sending & receiving money',
+      title: '4. Receiving money',
       body: [
-        'Incoming funds (ACH, FedNow, Wire, SEPA) are credited to your balance once confirmed on the applicable rail. You may send funds to bank accounts or supported wallets in 80+ countries. Transmission times and availability depend on networks outside our reasonable control.',
-        'You must ensure the recipient details you provide are correct. Once a transfer to an incorrect destination has been successfully executed, recovery cannot be guaranteed.',
+        'Incoming funds (ACH, FedNow, Wire, SEPA) are converted into stablecoins through our payments provider and swept to the Base wallet you designate as your deposit destination — usually within minutes of confirmation on the applicable rail, subject to networks outside our reasonable control.',
+        'You must ensure the wallet address you designate is correct and belongs to you. Once funds have been swept to that address, recovery of funds sent to an incorrect or foreign destination cannot be guaranteed.',
       ],
     },
     {
       title: '5. Fees & exchange rates',
       body: [
-        'We publish all applicable fees before you confirm a transfer. Cross-border transfers use the mid-market exchange rate at the time of execution; we do not apply hidden spread markups unless expressly disclosed on screen.',
-        'Yield, where earned on balances held in custody, is generated from underlying assets of the backing portfolio and is variable — past performance does not guarantee future returns.',
+        'Conversion of incoming payments into stablecoins happens through our payments provider at the prevailing rate at the time of execution; we do not apply hidden spread markups. We publish the applicable fee schedule in the app before you use the Services.',
+        'Balances held at our payments provider are not interest-bearing. F&L does not pay interest on balances.',
       ],
     },
     {

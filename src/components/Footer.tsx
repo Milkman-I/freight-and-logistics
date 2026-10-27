@@ -127,9 +127,9 @@ export function Footer() {
           <LinkCol label="Resources" items={c.resources} />
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#A9BCA0]/70">
-              {c.firstTransfer.label}
+              {c.firstDeposit.label}
             </p>
-            <p className="mt-4 leading-relaxed text-[#C9E3AE]">{c.firstTransfer.body}</p>
+            <p className="mt-4 leading-relaxed text-[#C9E3AE]">{c.firstDeposit.body}</p>
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#A9BCA0]/70">
