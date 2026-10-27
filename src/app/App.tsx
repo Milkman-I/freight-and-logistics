@@ -21,7 +21,6 @@ import { AuthPage } from '../features/auth/page'
 import { Dashboard } from '../features/dashboard/page'
 import { LegalPage } from '../features/legal/page'
 import { KycPage } from '../features/kyc/page'
-import { SendPage } from '../features/send/page'
 import { InvoicesPage } from '../features/invoices/page'
 
 function RequireSession({ session, children }: { session: Session | null; children: React.ReactNode }) {
@@ -93,14 +92,6 @@ function AppRoutes() {
         }
       />
       <Route path="/kyc/done" element={<Navigate to="/kyc" replace />} />
-      <Route
-        path="/send"
-        element={
-          <RequireSession session={session}>
-            <SendPage />
-          </RequireSession>
-        }
-      />
       <Route
         path="/invoices"
         element={

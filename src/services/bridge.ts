@@ -72,12 +72,11 @@ export function syncKyc(): Promise<{
   return callFn('bridge-customer', {})
 }
 
-/** provision (idempotently) wallet + virtual accounts + webhook endpoint;
+/** provision (idempotently) the user's virtual accounts + webhook endpoint;
  * `depositDestination` (the user's own wallet) is required unless a
  * previous call already stored one server-side */
 export function provisionAccounts(depositDestination: string): Promise<{
   accounts: MoneyAccountRow[]
-  wallet_address?: string
   deposit_destination?: string | null
   notes?: string[]
   webhook?: { id: string; url: string; status: string; public_key?: string | null }

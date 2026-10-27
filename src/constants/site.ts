@@ -6,7 +6,6 @@
 export const NAV_LINKS = [
   { label: 'Home', to: '#top' },
   { label: 'Features', to: '#features' },
-  { label: 'Send money', to: '/send' },
   { label: 'Invoices', to: '/invoices' },
 ]
 
@@ -56,7 +55,6 @@ export const FOOTER_CONTENT = {
   navigation: [
     { label: 'Home', to: '#top' },
     { label: 'Features', to: '#features' },
-    { label: 'Send money', to: '/send' },
     { label: 'Invoices', to: '/invoices' },
   ],
   resources: [

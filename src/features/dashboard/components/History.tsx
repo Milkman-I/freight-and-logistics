@@ -56,7 +56,7 @@ export function History({
       </div>
 
       {visible.length === 0 ? (
-        <EmptyState text={hasAny ? 'Nothing matches this filter.' : 'No transactions yet. Money you receive or send appears here.'} />
+        <EmptyState text={hasAny ? 'Nothing matches this filter.' : 'No transactions yet. Money you receive appears here.'} />
       ) : (
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-sm">

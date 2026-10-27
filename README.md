@@ -1,6 +1,6 @@
 # F&L — Web (Vite + React)
 
-Stablecoin banking platform: email sign-in → KYC → bank accounts → wallets → transfers → invoices.
+Stablecoin banking platform (receive-only): email sign-in → KYC → bank accounts → deposits → invoices. Deposits sweep straight to the user's own Base wallet.
 
 ## Stack
 
@@ -38,15 +38,15 @@ src/
 │   ├── landing/                 # "/" marketing page (+ IsoShapes)
 │   ├── auth/                    # "/login", "/signup" — dual mode, public-only guard
 │   ├── kyc/                     # "/kyc" hosted verification flow (+ KycSteps)
-│   ├── send/                    # "/send" transfers (+ TransferForm / TransferConfirmation)
 │   ├── dashboard/               # "/app" real-data shell (+ AccountDetails, Cashflow, History, KycStrip, StatCard)
+│   ├── invoices/                # "/invoices" receive-side billing
+│   │   └── components/          # InvoiceForm, InvoiceList, etc.
 │   └── legal/                   # "/terms", "/privacy"
 ├── services/                    # all Supabase I/O lives here
 │   ├── supabase.ts              # browser client (persistSession, detectSessionInUrl)
 │   ├── auth.ts                  # signInWithGoogle + useGoogleAuth
 │   ├── profiles.ts              # user_profiles reads
 │   ├── money.ts                 # money_accounts + transactions reads (fetchDashboardMoney)
-│   ├── transfers.ts             # insert-only outgoing pending transactions
 │   └── bridge.ts                # calls Edge Functions with the user's access token
 ├── types/                       # DB mirror types (user.ts: profile/KYC, money.ts: accounts/tx lifecycle)
 ├── utils/                       # format.ts (minor/major money), accounts.ts (naming, rails)
@@ -64,9 +64,9 @@ Edge Functions (`supabase/functions/`, deployed):
 |---|---|---|
 | `bridge-customer` | ✅ | creates/resumes the user's Bridge **kyc link** (`POST /v0/kyc_links`, `Api-Key` header), syncs `kyc_status` + `bridge_customer_id` + Bridge's terms-of-service acceptance (`tos_link` / `tos_status` — required by Bridge before a customer can be approved); self-healing — Bridge allows one kyc link per email, so a `duplicate_record` rejection adopts the existing link and re-opens it instead of erroring (abandoned-mid-Persona users always get their original link back); every success response carries `redirect_url` |
 | `bridge-kyc-link` | ✅ | returns the hosted Persona verification URL for the stored kyc link |
-| `bridge-accounts` | ✅ | idempotent provisioning for approved customers: Base custody wallet (USDB) → USD virtual account (ACH push/FedNow/Wire) → EUR virtual IBAN (SEPA) whose sweeps land on the **deposit destination** the user must enter at setup (their own Base address — required in the request body, persisted in `user_profiles`; frozen once virtual accounts exist, a change returns `409 destination_locked`); registers + activates the Bridge webhook endpoint and stores its RSA public key in `bridge_config` |
-| `bridge-webhook` | ❌ | single receiver for all Bridge events; RSA signature verification (`X-Webhook-Signature: t=…,v0=…` against the `bridge_config` public key). New flat event schema only: `customer.*` → `kyc_status`, `kyc_link.*` → kyc + customer id, `virtual_account*` → `money_accounts`, `bridge_wallet*` → wallet row, `transfer.*` → `transactions` (upsert by `bridge_transfer_id`, settled incoming payments auto-mark matching invoices paid; deposits whose destination is not the user's custody wallet get `category: 'external_sweep'` so they don't count as in-app balance). At-least-once: processed event ids answer 200 without re-running, failures answer 5xx for redelivery |
-| `bridge-create-transfer` | ✅ | submits the user's `pending` tx row as a real Bridge transfer — wallet-funded (`source: {payment_rail: "bridge_wallet", bridge_wallet_id}` from their custody wallet row) to `destination.to_address`, `Idempotency-Key`; links `bridge_transfer_id` or flips the row to `failed` |
+| `bridge-accounts` | ✅ | idempotent provisioning for approved customers — **receive-only, no custody wallet**: USD virtual account (ACH push/FedNow/Wire → USDC) and EUR virtual IBAN (SEPA → EURC) whose sweeps land on the **deposit destination** the user must enter at setup (their own Base address — required in the request body, persisted in `user_profiles`; frozen once virtual accounts exist, a change returns `409 destination_locked`); registers + activates the Bridge webhook endpoint and stores its RSA public key in `bridge_config` |
+| `bridge-webhook` | ❌ | single receiver for all Bridge events; RSA signature verification (`X-Webhook-Signature: t=…,v0=…` against the `bridge_config` public key). New flat event schema only: `customer.*` → `kyc_status`, `kyc_link.*` → kyc + customer id, `virtual_account*` → `money_accounts`, `bridge_wallet*` → wallet row (legacy users only), `transfer.*` → `transactions` (upsert by `bridge_transfer_id`, settled incoming payments auto-mark matching invoices paid; deposits are categorized `external_sweep` — swept money belongs to the user's own wallet, not in-app balance). At-least-once: processed event ids answer 200 without re-running, failures answer 5xx for redelivery |
+| `bridge-create-transfer` | ✅ | retired with the send feature (no client route); kept deployed as a fail-fast guard — without a custody wallet row it flips the `pending` row to `failed` and answers `400 wallet_not_provisioned` |
 
 Database (canonical migrations now in `supabase/migrations/*` — single source of truth; never hand-apply via dashboard):
 
@@ -88,7 +88,7 @@ Database (canonical migrations now in `supabase/migrations/*` — single source 
 
 > Note: `google_email` is a legacy column name — it carries the auth email for any provider (email-based accounts included). No Google/OAuth dependency remains in the app.
 
-- **`money_accounts`** — `kind` (`us_checking | eur_iban | wallet`), `currency` (`USD | EUR | USDB`), `routing_number` / `account_number` / `iban`, `bank_name` / `beneficiary_name` (real deposit instructions), `wallet_address` (custody address), `rails` (text[]), `status` (`pending | active | failed`), `bridge_account_id`.
+- **`money_accounts`** — `kind` (`us_checking | eur_iban | wallet`), `currency` (`USD | EUR | USDB`), `routing_number` / `account_number` / `iban`, `bank_name` / `beneficiary_name` (real deposit instructions), `wallet_address` (the sweep destination Bridge reported), `rails` (text[]), `status` (`pending | active | failed`), `bridge_account_id`.
 - **`transactions`** — `amount_minor > 0`, `currency`, `rail` (`ach_push | fednow | wire | sepa | base` (+ `bridge_wallet` / `static_memo` as recorded from Bridge webhook sources)), `status` lifecycle (`awaiting_funds → funds_arriving → pending → funds_received → settled | failed`), `bridge_transfer_id`.
 
 RLS: users can SELECT/own everything; `user_profiles` allows UPDATE own (column guard trigger); `transactions` allows INSERT only `direction='out'` and `pending | failed`. All inserts from Bridge flows happen via webhook service role, never the browser.

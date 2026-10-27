@@ -133,11 +133,11 @@ export function Dashboard({ session }: { session: Session }) {
               />
             </div>
             <button
-              onClick={() => navigate('/send')}
+              onClick={() => navigate('/invoices')}
               className="flex h-11 items-center gap-2 rounded-full bg-lime px-4 text-sm font-bold text-on-lime transition-opacity hover:opacity-90"
             >
-              <I d={ICONS.outArrow} className="h-4 w-4" />
-              Send
+              <I d={ICONS.invoice} className="h-4 w-4" />
+              Invoice
             </button>
             {avatar && (
               <img src={avatar} referrerPolicy="no-referrer" alt="" className="h-11 w-11 rounded-full border border-line object-cover" />
@@ -195,7 +195,7 @@ export function Dashboard({ session }: { session: Session }) {
                 icon={<I d={ICONS.inArrow} className="h-4 w-4" />}
               />
               <StatCard
-                title="Send money"
+                title="Sent out"
                 value={'$' + sendYear.reduce((a, t) => a + toMajor(t.amount_minor, t.currency), 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}
                 sub="Sent in the past 12 months"
                 icon={<I d={ICONS.outArrow} className="h-4 w-4" />}

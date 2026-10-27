@@ -3,9 +3,11 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 /**
  * bridge-accounts — provisions the KYC-approved user's Bridge payment
- * infrastructure (idempotent): a Base custody wallet (USDB), a USD virtual
- * account (ACH push/FedNow/Wire deposits → USDC to the chosen destination)
- * and a EUR virtual IBAN (SEPA deposits → EURC to the chosen destination).
+ * infrastructure (idempotent) — RECEIVE-ONLY: a USD virtual account
+ * (ACH push/FedNow/Wire deposits → USDC to the chosen destination)
+ * and a EUR virtual IBAN (SEPA deposits → EURC to the chosen
+ * destination). There is no custody wallet: deposits sweep straight to
+ * the user's own Base address and outbound sends are not offered.
  * The user must enter their own deposit destination (a Base address) —
  * `deposit_destination` in the request body, persisted to user_profiles;
  * idempotent replays may omit it when already stored. The choice is
@@ -50,12 +52,6 @@ const json = (
     status,
     headers: { "content-type": "application/json", ...cors },
   });
-
-type Wallet = {
-  id: string;
-  address?: string;
-  chain?: string;
-};
 
 type DepositInstructions = {
   bank_name?: string;
@@ -221,37 +217,11 @@ Deno.serve(async (req: Request) => {
       .eq("id", user.id);
   }
 
-  if (!rows.some((a) => a.kind === "wallet")) {
-    const res = await post(`/customers/${cid}/wallets`, { chain: "base" }, idemFor("base-wallet"));
-    if (!res.ok) {
-      notes.push(`wallet: ${(await res.text()).slice(0, 220)}`);
-    } else {
-      const w = (await res.json()) as Wallet;
-      await upsertRow({
-        user_id: user.id,
-        bridge_account_id: w.id,
-        kind: "wallet",
-        currency: "USDB",
-        wallet_address: w.address ?? null,
-        rails: [w.chain ?? "base"],
-        status: "active",
-      });
-    }
-  }
-
-  const { data: walletRow } = await db
-    .schema("public")
-    .from("money_accounts")
-    .select("wallet_address")
-    .eq("user_id", user.id)
-    .eq("kind", "wallet")
-    .maybeSingle<{ wallet_address: string | null }>();
-  const walletAddress = walletRow?.wallet_address ?? null;
   // Where converted USDC/EURC sweeps: the user's own wallet (requested or
-  // stored) — the custody wallet is never an implicit fallback.
+  // stored) — required, never false-fallback.
   const destinationAddress = requestedNorm ?? stored;
 
-  if (!rows.some((a) => a.currency === "USD" && a.kind === "us_checking") && destinationAddress) {
+  if (!rows.some((a) => a.currency === "USD" && a.kind === "us_checking")) {
     const res = await post(
       `/customers/${cid}/virtual_accounts`,
       {
@@ -283,7 +253,7 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  if (!rows.some((a) => a.currency === "EUR" && a.kind === "eur_iban") && destinationAddress) {
+  if (!rows.some((a) => a.currency === "EUR" && a.kind === "eur_iban")) {
     const res = await post(
       `/customers/${cid}/virtual_accounts`,
       {
@@ -384,7 +354,6 @@ Deno.serve(async (req: Request) => {
   return json(
     {
       accounts: accounts ?? [],
-      wallet_address: walletAddress,
       deposit_destination: destinationAddress,
       webhook,
       notes,

@@ -39,7 +39,7 @@ function RailButton({
   )
 }
 
-export function AppRail({ active }: { active: 'home' | 'send' | 'invoices' | 'kyc' | 'history' | 'accounts' }) {
+export function AppRail({ active }: { active: 'home' | 'invoices' | 'kyc' | 'history' | 'accounts' }) {
   const navigate = useNavigate()
   const [kyc, setKyc] = useState<UserProfile['kyc_status'] | null>(null)
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
@@ -74,9 +74,6 @@ export function AppRail({ active }: { active: 'home' | 'send' | 'invoices' | 'ky
 
       <RailButton label="Home" active={active === 'home'} onClick={() => navigate('/app')}>
         <I d={ICONS.home} />
-      </RailButton>
-      <RailButton label="Send money" active={active === 'send'} onClick={() => navigate('/send')}>
-        <I d={ICONS.outArrow} />
       </RailButton>
       <RailButton label="Invoices" active={active === 'invoices'} onClick={() => navigate('/invoices')}>
         <I d={ICONS.invoice} />
