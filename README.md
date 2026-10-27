@@ -83,6 +83,7 @@ Database (canonical migrations now in `supabase/migrations/*` — single source 
 | `20261027110000_transactions_rail_new_bridge.sql` | `transactions.rail` constraint → current Bridge rails (`ach_push | fednow | wire | sepa | base | bridge_wallet | static_memo`) |
 | `20261027124000_invoices_kyc_gate.sql` | `invoices_kyc_gate` trigger — only KYC-approved customers may insert invoices (enforced in-database, holds against direct writes) |
 | `20261027140000_deposit_destination.sql` | `user_profiles.deposit_destination` (required sweep wallet — the user's own Base address, `^0x[a-fA-F0-9]{40}$` CHECK) + canonical `balances` view (`security_invoker`, excludes `external_sweep` rows) |
+| `20261027150000_receive_only_transactions.sql` | drops `transactions_insert_own_out` — clients never insert transactions (receive-only; webhook is the sole writer) |
 
 - **`user_profiles`** — `id` (= auth.users), `google_email`, `full_name`, `avatar_url`, `bridge_customer_id`, `bridge_kyc_link_id`, `kyc_status` (`not_started | under_review | incomplete | approved | rejected`), `deposit_destination` (the user's own Base address that virtual-account deposits sweep into — required to open accounts, written by `bridge-accounts` only, frozen once accounts exist). The `guard_user_profile` trigger blocks non-service updates to `kyc_status` / `bridge_customer_id` / `google_email`.
 
@@ -91,7 +92,7 @@ Database (canonical migrations now in `supabase/migrations/*` — single source 
 - **`money_accounts`** — `kind` (`us_checking | eur_iban | wallet`), `currency` (`USD | EUR | USDB`), `routing_number` / `account_number` / `iban`, `bank_name` / `beneficiary_name` (real deposit instructions), `wallet_address` (the sweep destination Bridge reported), `rails` (text[]), `status` (`pending | active | failed`), `bridge_account_id`.
 - **`transactions`** — `amount_minor > 0`, `currency`, `rail` (`ach_push | fednow | wire | sepa | base` (+ `bridge_wallet` / `static_memo` as recorded from Bridge webhook sources)), `status` lifecycle (`awaiting_funds → funds_arriving → pending → funds_received → settled | failed`), `bridge_transfer_id`.
 
-RLS: users can SELECT/own everything; `user_profiles` allows UPDATE own (column guard trigger); `transactions` allows INSERT only `direction='out'` and `pending | failed`. All inserts from Bridge flows happen via webhook service role, never the browser.
+RLS: users can SELECT/own everything; `user_profiles` allows UPDATE own (column guard trigger); `transactions` is read-only for clients — the Bridge webhook (service role) is the only writer, both directions.
 
 ## What's needed for email sign-in to work
 
