@@ -132,13 +132,6 @@ export function Dashboard({ session }: { session: Session }) {
                 className="h-11 w-56 rounded-full border border-line bg-paper pl-10 pr-4 text-sm text-ink outline-none placeholder:text-muted focus:border-lime/60 lg:w-80"
               />
             </div>
-            <button
-              onClick={() => navigate('/invoices')}
-              className="flex h-11 items-center gap-2 rounded-full bg-lime px-4 text-sm font-bold text-on-lime transition-opacity hover:opacity-90"
-            >
-              <I d={ICONS.invoice} className="h-4 w-4" />
-              Invoice
-            </button>
             {avatar && (
               <img src={avatar} referrerPolicy="no-referrer" alt="" className="h-11 w-11 rounded-full border border-line object-cover" />
             )}

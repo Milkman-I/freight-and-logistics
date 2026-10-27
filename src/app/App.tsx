@@ -21,7 +21,6 @@ import { AuthPage } from '../features/auth/page'
 import { Dashboard } from '../features/dashboard/page'
 import { LegalPage } from '../features/legal/page'
 import { KycPage } from '../features/kyc/page'
-import { InvoicesPage } from '../features/invoices/page'
 
 function RequireSession({ session, children }: { session: Session | null; children: React.ReactNode }) {
   const location = useLocation()
@@ -92,14 +91,6 @@ function AppRoutes() {
         }
       />
       <Route path="/kyc/done" element={<Navigate to="/kyc" replace />} />
-      <Route
-        path="/invoices"
-        element={
-          <RequireSession session={session}>
-            <InvoicesPage />
-          </RequireSession>
-        }
-      />
       <Route path="/terms" element={<LegalPage kind="terms" />} />
       <Route path="/privacy" element={<LegalPage kind="privacy" />} />
       <Route path="*" element={<Navigate to="/" replace />} />

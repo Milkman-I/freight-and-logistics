@@ -11,12 +11,10 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
  * by bridge-accounts on provisioning); unverified or stale events are
  * rejected 401. Mirrors the current flat event schema: customer →
  * kyc_status, kyc_link → kyc + customer id, virtual_account →
- * money_accounts, bridge_wallet → wallet row, transfer → transactions
- * (settled incoming payments auto-match the oldest open invoice of the
- * same amount + currency; deposits whose destination address is not the
- * user's custody wallet are categorized external_sweep so the balances
- * view excludes that money — it swept to the user's chosen wallet outside
- * the app). Processing is at-least-once: already
+ * money_accounts, bridge_wallet → wallet row (legacy users only),
+ * transfer → transactions (upsert by `bridge_transfer_id`; deposits are
+ * categorized external_sweep — swept money belongs to the user's own
+ * wallet, not in-app balance). Processing is at-least-once: already
  * processed event ids answer 200 without re-running, failures answer
  * 5xx so Bridge redelivers. Every verified event is audited in
  * webhook_events. Secrets: SUPABASE service role (built-ins).
@@ -333,27 +331,6 @@ Deno.serve(async (req: Request) => {
           txRowId = inserted.data?.id ?? null;
         } else {
           errorNote = `unresolved owner for transfer ${t.id}`;
-        }
-
-        if (isDeposit && userId && txRowId && (status === "funds_received" || status === "settled")) {
-          const { data: invoice } = await db
-            .schema("public")
-            .from("invoices")
-            .select("id")
-            .eq("user_id", userId)
-            .eq("status", "unpaid")
-            .eq("currency", currency)
-            .eq("amount_minor", amountMinor)
-            .order("created_at", { ascending: true })
-            .limit(1)
-            .maybeSingle<{ id: string }>();
-          if (invoice) {
-            await db
-              .schema("public")
-              .from("invoices")
-              .update({ status: "paid", paid_at: new Date().toISOString(), tx_id: txRowId })
-              .eq("id", invoice.id);
-          }
         }
       }
     }

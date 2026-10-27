@@ -6,7 +6,6 @@
 export const NAV_LINKS = [
   { label: 'Home', to: '#top' },
   { label: 'Features', to: '#features' },
-  { label: 'Invoices', to: '/invoices' },
 ]
 
 export const HERO_STATS = [
@@ -55,7 +54,6 @@ export const FOOTER_CONTENT = {
   navigation: [
     { label: 'Home', to: '#top' },
     { label: 'Features', to: '#features' },
-    { label: 'Invoices', to: '/invoices' },
   ],
   resources: [
     { label: 'Terms of Service', to: '/terms' },
